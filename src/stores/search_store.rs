@@ -19,6 +19,8 @@ pub struct SearchStore {
     pub suggestions: Vec<String>,
     // Context-aware priority
     pub current_tab: Option<TabType>,
+    // Whether the advanced search panel is open
+    pub is_advanced_search_open: bool,
     // Available filter tags
     pub available_tags: Vec<String>,
     // Selected filter tags
@@ -53,6 +55,7 @@ impl Default for SearchStore {
             recent_searches: Vec::new(),
             suggestions: Vec::new(),
             current_tab: None,
+            is_advanced_search_open: false,
             available_tags: vec![
                 "Real Estate".to_string(),
                 "Vehicle".to_string(),
@@ -167,6 +170,19 @@ impl SearchStore {
         self.is_loading = false;
     }
 
+    // Toggle advanced search panel
+    pub fn toggle_advanced_search(&mut self) {
+        self.is_advanced_search_open = !self.is_advanced_search_open;
+    }
+
+    pub fn open_advanced_search(&mut self) {
+        self.is_advanced_search_open = true;
+    }
+
+    pub fn close_advanced_search(&mut self) {
+        self.is_advanced_search_open = false;
+    }
+
     // Set context tab for priority searching
     pub fn set_context_tab(&mut self, tab: TabType) {
         self.current_tab = Some(tab.clone());
@@ -181,6 +197,12 @@ impl SearchStore {
             }
             TabType::Networking => {
                 // Prioritize users
+            }
+            TabType::Organization => {
+                // Prioritize organizations and members
+            }
+            TabType::Transactions => {
+                // Prioritize transactions
             }
             TabType::History => {
                 // Prioritize actions
@@ -208,6 +230,15 @@ impl SearchStore {
                 TabType::Networking => {
                     suggestions.push("user:".to_string());
                     suggestions.push("role:".to_string());
+                }
+                TabType::Organization => {
+                    suggestions.push("org:".to_string());
+                    suggestions.push("member:".to_string());
+                    suggestions.push("department:".to_string());
+                }
+                TabType::Transactions => {
+                    suggestions.push("txn:".to_string());
+                    suggestions.push("status:".to_string());
                 }
                 TabType::History => {
                     suggestions.push("action:".to_string());
@@ -267,7 +298,7 @@ impl Default for MeilisearchConfig {
         Self {
             host: "http://localhost:7700".to_string(),
             api_key: String::new(),
-            index_name: "channel_manager".to_string(),
+            index_name: "farley".to_string(),
         }
     }
 }

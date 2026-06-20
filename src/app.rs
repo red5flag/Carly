@@ -1,11 +1,10 @@
+use crate::components::footer::Footer;
 use crate::components::navbar::Navbar;
 use crate::components::tabs::TabsContainer;
-use crate::pages::{AgentPage, HistoryPage, NetworkingPage, OverviewPage, PortfoliosPage, SettingsPage};
+use crate::pages::LoginPage;
 use crate::stores::{AppStore, SearchStore, UndoRedoStore};
 use leptos::prelude::*;
 use leptos_meta::*;
-use leptos_router::components::{Router, Routes, Route};
-use leptos_router::path;
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -16,6 +15,7 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <AutoReload options=options.clone() />
                 <HydrationScripts options/>
+                <link rel="stylesheet" href="/pkg/farley.css"/>
                 <MetaTags/>
             </head>
             <body>
@@ -40,28 +40,29 @@ pub fn App() -> impl IntoView {
     provide_context(search_store);
     provide_context(undo_store);
 
+    let is_authenticated = Memo::new(move |_| app_store.get().is_authenticated);
+
     view! {
-        <Router>
+        <Show
+            when=move || is_authenticated.get()
+            fallback=move || view! {
+                <div class="app-container">
+                    <LoginPage />
+                </div>
+            }
+        >
             <div class="app-container">
-                // Main content area with routes
+                // Main content area with collapsible tabs
                 <main class="main-content">
-                    <Routes fallback=|| "Page not found">
-                        <Route path=path!("/") view=OverviewPage />
-                        <Route path=path!("/overview") view=OverviewPage />
-                        <Route path=path!("/portfolios") view=PortfoliosPage />
-                        <Route path=path!("/networking") view=NetworkingPage />
-                        <Route path=path!("/history") view=HistoryPage />
-                        <Route path=path!("/settings") view=SettingsPage />
-                        <Route path=path!("/agent") view=AgentPage />
-                    </Routes>
+                    <TabsContainer />
                 </main>
 
-                // Tabs Container
-                <TabsContainer />
-
-                // Navigation Bar (fixed at bottom)
+                // Navigation Bar (fixed at top)
                 <Navbar />
+
+                // Footer
+                <Footer />
             </div>
-        </Router>
+        </Show>
     }
 }

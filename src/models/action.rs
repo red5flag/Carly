@@ -12,12 +12,15 @@ pub struct Action {
     pub entity_id: Uuid,
     pub description: String,
     pub user_id: Uuid,
+    pub user_name: String,
+    pub user_role: String,
+    pub organization_id: Option<Uuid>,
     pub timestamp: DateTime<Utc>,
     pub previous_state: Option<serde_json::Value>,
     pub new_state: Option<serde_json::Value>,
-    pub tab_context: Option<String>, // Which tab was active when action was taken
-    pub navigated_from: Option<String>, // Previous location/page
-    pub navigated_to: Option<String>, // New location/page
+    pub tab_context: Option<String>,
+    pub navigated_from: Option<String>,
+    pub navigated_to: Option<String>,
     pub metadata: serde_json::Value,
 }
 
@@ -36,6 +39,9 @@ impl Action {
             entity_id,
             description,
             user_id,
+            user_name: String::new(),
+            user_role: String::new(),
+            organization_id: None,
             timestamp: Utc::now(),
             previous_state: None,
             new_state: None,
@@ -44,6 +50,13 @@ impl Action {
             navigated_to: None,
             metadata: serde_json::json!({}),
         }
+    }
+
+    pub fn with_user(mut self, name: String, role: String, org_id: Option<Uuid>) -> Self {
+        self.user_name = name;
+        self.user_role = role;
+        self.organization_id = org_id;
+        self
     }
 
     pub fn with_state(

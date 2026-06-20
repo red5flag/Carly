@@ -2,23 +2,31 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// User roles for organization hierarchy
+// User roles for organization hierarchy: Owner > Manager > Worker > Guest
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UserRole {
     Owner,
     Manager,
     Worker,
+    Guest,
 }
 
 impl UserRole {
-    pub fn can_manage(&self, other: &UserRole) -> bool {
-        match (self, other) {
-            (UserRole::Owner, _) => true,
-            (UserRole::Manager, UserRole::Worker) => true,
-            (UserRole::Manager, UserRole::Manager) => false,
-            (UserRole::Worker, _) => false,
-            _ => false,
+    pub fn level(&self) -> u8 {
+        match self {
+            UserRole::Owner => 3,
+            UserRole::Manager => 2,
+            UserRole::Worker => 1,
+            UserRole::Guest => 0,
         }
+    }
+
+    pub fn can_manage(&self, other: &UserRole) -> bool {
+        self.level() > other.level()
+    }
+
+    pub fn can_equal_or_manage(&self, other: &UserRole) -> bool {
+        self.level() >= other.level()
     }
 }
 
@@ -162,6 +170,11 @@ pub enum ActionType {
     Setting,
     Payment,
     Notification,
+    Search,
+    Undo,
+    Redo,
+    Login,
+    Logout,
 }
 
 // Theme/accessibility options
@@ -198,6 +211,8 @@ pub enum TabType {
     Overview,
     Portfolios,
     Networking,
+    Organization,
+    Transactions,
     History,
     Settings,
     Agent,
@@ -209,6 +224,8 @@ impl TabType {
             TabType::Overview => "Overview",
             TabType::Portfolios => "Portfolios",
             TabType::Networking => "Networking",
+            TabType::Organization => "Organization",
+            TabType::Transactions => "Transactions",
             TabType::History => "History",
             TabType::Settings => "Settings",
             TabType::Agent => "Agent",
@@ -217,7 +234,7 @@ impl TabType {
 }
 
 // Organization settings
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct OrganizationSettings {
     pub default_currency: Currency,
     pub default_payment_interval: PaymentInterval,

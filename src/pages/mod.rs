@@ -1,15 +1,23 @@
 pub mod agent;
+pub mod email_valid;
 pub mod history;
 pub mod home;
+pub mod login;
 pub mod networking;
+pub mod organization;
 pub mod overview;
 pub mod portfolios;
 pub mod settings;
+pub mod transactions;
 
 pub use agent::AgentPage;
+pub use email_valid::EmailValidPage;
 pub use history::HistoryPage;
 pub use home::HomePage;
+pub use login::LoginPage;
 pub use networking::NetworkingPage;
+pub use organization::OrganizationPage;
 pub use overview::OverviewPage;
 pub use portfolios::PortfoliosPage;
 pub use settings::SettingsPage;
+pub use transactions::TransactionsPage;

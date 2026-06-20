@@ -1,4 +1,4 @@
-use crate::models::{Payment, PaymentSettings, PaymentStatus, User};
+use crate::models::{default_permissions_for_role, Payment, PaymentSettings, PaymentStatus, Permission, User};
 use crate::stores::use_app_store;
 use crate::types::{PaymentInterval, PaymentMethod, UserRole};
 use chrono::Utc;
@@ -7,88 +7,54 @@ use uuid::Uuid;
 
 #[component]
 pub fn NetworkingPage() -> impl IntoView {
-    let _app_store = use_app_store();
+    let app_store = use_app_store();
 
-    // Mock users data
+    // Users come from app store, fall back to default mock users if empty
     let users = Memo::new(move |_| {
-        vec![
-            User {
-                id: Uuid::new_v4(),
-                name: "John Smith".to_string(),
-                email: "john@company.com".to_string(),
-                role: UserRole::Owner,
-                organization_id: Some(Uuid::new_v4()),
-                department: Some("Executive".to_string()),
-                phone: Some("+1-555-0100".to_string()),
-                address: Some("123 Main St".to_string()),
-                hire_date: Some(Utc::now()),
-                base_salary: Some(200000.0),
-                payment_settings: PaymentSettings {
-                    payment_method: PaymentMethod::BankTransfer,
-                    account_details: "****1234".to_string(),
-                    payment_interval: PaymentInterval::Monthly,
-                    currency: crate::types::Currency::USD,
-                    automatic_payout: true,
-                    payout_threshold: None,
-                },
-                notification_preferences: vec![],
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                last_login: Some(Utc::now()),
-                is_active: true,
-            },
-            User {
-                id: Uuid::new_v4(),
-                name: "Sarah Johnson".to_string(),
-                email: "sarah@company.com".to_string(),
-                role: UserRole::Manager,
-                organization_id: Some(Uuid::new_v4()),
-                department: Some("Operations".to_string()),
-                phone: Some("+1-555-0101".to_string()),
-                address: None,
-                hire_date: Some(Utc::now()),
-                base_salary: Some(120000.0),
-                payment_settings: PaymentSettings {
-                    payment_method: PaymentMethod::DirectDeposit,
-                    account_details: "****5678".to_string(),
-                    payment_interval: PaymentInterval::BiWeekly,
-                    currency: crate::types::Currency::USD,
-                    automatic_payout: true,
-                    payout_threshold: None,
-                },
-                notification_preferences: vec![],
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                last_login: Some(Utc::now()),
-                is_active: true,
-            },
-            User {
-                id: Uuid::new_v4(),
-                name: "Mike Williams".to_string(),
-                email: "mike@company.com".to_string(),
-                role: UserRole::Worker,
-                organization_id: Some(Uuid::new_v4()),
-                department: Some("Field Operations".to_string()),
-                phone: Some("+1-555-0102".to_string()),
-                address: None,
-                hire_date: Some(Utc::now()),
-                base_salary: Some(65000.0),
-                payment_settings: PaymentSettings {
-                    payment_method: PaymentMethod::BankTransfer,
-                    account_details: "****9012".to_string(),
-                    payment_interval: PaymentInterval::Weekly,
-                    currency: crate::types::Currency::USD,
-                    automatic_payout: true,
-                    payout_threshold: None,
-                },
-                notification_preferences: vec![],
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-                last_login: Some(Utc::now()),
-                is_active: true,
-            },
-        ]
+        let store_users = app_store.get().organization_users.clone();
+        if store_users.is_empty() {
+            default_mock_users()
+        } else {
+            store_users
+        }
     });
+
+    // New user form state
+    let (new_name, set_new_name) = signal(String::new());
+    let (new_email, set_new_email) = signal(String::new());
+    let (new_role, set_new_role) = signal(UserRole::Worker);
+
+    let on_add_user = move |_| {
+        let name = new_name.get().trim().to_string();
+        let email = new_email.get().trim().to_string();
+        if name.is_empty() || email.is_empty() {
+            return;
+        }
+        let mut user = User::new(name, email, new_role.get());
+        user.organization_id = app_store.get().current_user.organization_id;
+        app_store.update(|s| s.add_organization_user(user));
+        set_new_name.set(String::new());
+        set_new_email.set(String::new());
+        set_new_role.set(UserRole::Worker);
+    };
+
+    let on_update_role = move |id: Uuid, role: UserRole| {
+        app_store.update(|s| {
+            let _ = s.update_user_role(id, role);
+        });
+    };
+
+    let on_remove_user = move |id: Uuid| {
+        app_store.update(|s| {
+            s.remove_organization_user(id);
+        });
+    };
+
+    let on_toggle_permission = move |id: Uuid, permission: Permission| {
+        app_store.update(|s| {
+            s.toggle_user_permission(id, permission);
+        });
+    };
 
     // Mock transactions
     let transactions = Memo::new(move |_| {
@@ -178,10 +144,59 @@ pub fn NetworkingPage() -> impl IntoView {
                 </div>
             </div>
 
-            // Users List
+            // Add User Form
             <div class="data-card">
                 <div class="card-header">
-                    <span class="card-title">"Team Members"</span>
+                    <span class="card-title">"Add Team Member"</span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">"Name"</label>
+                    <input
+                        class="form-input"
+                        type="text"
+                        placeholder="Full name"
+                        prop:value=new_name
+                        on:input=move |ev| set_new_name.set(event_target_value(&ev))
+                    />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">"Email"</label>
+                    <input
+                        class="form-input"
+                        type="email"
+                        placeholder="Email address"
+                        prop:value=new_email
+                        on:input=move |ev| set_new_email.set(event_target_value(&ev))
+                    />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">"Role"</label>
+                    <select
+                        class="form-select"
+                        prop:value={move || format!("{:?}", new_role.get())}
+                        on:change=move |ev| {
+                            let value = event_target_value(&ev);
+                            set_new_role.set(match value.as_str() {
+                                "Owner" => UserRole::Owner,
+                                "Manager" => UserRole::Manager,
+                                "Worker" => UserRole::Worker,
+                                _ => UserRole::Guest,
+                            });
+                        }
+                    >
+                        <option value="Owner">"Owner"</option>
+                        <option value="Manager">"Manager"</option>
+                        <option value="Worker">"Worker"</option>
+                        <option value="Guest">"Guest"</option>
+                    </select>
+                </div>
+                <button class="card-btn" on:click=on_add_user>"Add Member"</button>
+            </div>
+
+            // Users List with Role Management
+            <div class="data-card">
+                <div class="card-header">
+                    <span class="card-title">"Team Members & Roles"</span>
                 </div>
                 <div class="data-list">
                     {move || {
@@ -192,32 +207,65 @@ pub fn NetworkingPage() -> impl IntoView {
                                     UserRole::Owner => "👑",
                                     UserRole::Manager => "⭐",
                                     UserRole::Worker => "👤",
+                                    UserRole::Guest => "🔒",
                                 };
                                 view! {
-                                    <div class="list-item">
+                                    <div class="list-item role-management-item">
                                         <div class="list-item-left">
                                             <div class="list-item-title">
                                                 {format!("{} {}", role_icon, user.name)}
                                             </div>
                                             <div class="list-item-subtitle">
-                                                {format!("{} - {}",
-                                                    match user.role {
-                                                        UserRole::Owner => "Owner",
-                                                        UserRole::Manager => "Manager",
-                                                        UserRole::Worker => "Worker",
-                                                    },
-                                                    user.department.as_deref().unwrap_or("General")
-                                                )}
+                                                {user.email.clone()}
+                                            </div>
+                                            <div class="permission-list">
+                                                {[
+                                                    (Permission::ViewOrganization, "View"),
+                                                    (Permission::EditOrganization, "Edit"),
+                                                    (Permission::ManageUsers, "Users"),
+                                                    (Permission::ManagePayments, "Payments"),
+                                                ].into_iter().map(|(permission, label)| {
+                                                    let has = user.has_permission(&permission);
+                                                    let user_id = user.id;
+                                                    view! {
+                                                        <label class="permission-tag" class:active=has>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked=has
+                                                                on:change=move |_| on_toggle_permission(user_id, permission.clone())
+                                                            />
+                                                            {label}
+                                                        </label>
+                                                    }
+                                                }).collect::<Vec<_>>()}
                                             </div>
                                         </div>
-                                        <div class="list-item-right">
-                                            {user.base_salary.map(|s| {
-                                                view! {
-                                                    <div class="list-item-value">
-                                                        {format!("${:.0}K", s / 1000.0)}
-                                                    </div>
+                                        <div class="list-item-right role-actions">
+                                            <select
+                                                class="role-select"
+                                                prop:value={move || format!("{:?}", user.role)}
+                                                on:change=move |ev| {
+                                                    let value = event_target_value(&ev);
+                                                    let role = match value.as_str() {
+                                                        "Owner" => UserRole::Owner,
+                                                        "Manager" => UserRole::Manager,
+                                                        "Worker" => UserRole::Worker,
+                                                        _ => UserRole::Guest,
+                                                    };
+                                                    on_update_role(user.id, role);
                                                 }
-                                            })}
+                                            >
+                                                <option value="Owner">"Owner"</option>
+                                                <option value="Manager">"Manager"</option>
+                                                <option value="Worker">"Worker"</option>
+                                                <option value="Guest">"Guest"</option>
+                                            </select>
+                                            <button
+                                                class="card-btn danger"
+                                                on:click=move |_| on_remove_user(user.id)
+                                            >
+                                                "Remove"
+                                            </button>
                                         </div>
                                     </div>
                                 }
@@ -287,4 +335,107 @@ pub fn NetworkingPage() -> impl IntoView {
             </div>
         </div>
     }
+}
+
+fn default_mock_users() -> Vec<User> {
+    let org_id = Uuid::new_v4();
+    vec![
+        User {
+            id: Uuid::new_v4(),
+            name: "John Smith".to_string(),
+            email: "john@company.com".to_string(),
+            role: UserRole::Owner,
+            organization_id: Some(org_id),
+            department: Some("Executive".to_string()),
+            phone: Some("+1-555-0100".to_string()),
+            address: Some("123 Main St".to_string()),
+            hire_date: Some(Utc::now()),
+            base_salary: Some(200000.0),
+            payment_settings: PaymentSettings {
+                payment_method: PaymentMethod::BankTransfer,
+                account_details: "****1234".to_string(),
+                payment_interval: PaymentInterval::Monthly,
+                currency: crate::types::Currency::USD,
+                automatic_payout: true,
+                payout_threshold: None,
+            },
+            notification_preferences: vec![],
+            permissions: default_permissions_for_role(&UserRole::Owner),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            last_login: Some(Utc::now()),
+            is_active: true,
+        },
+        User {
+            id: Uuid::new_v4(),
+            name: "Sarah Johnson".to_string(),
+            email: "sarah@company.com".to_string(),
+            role: UserRole::Manager,
+            organization_id: Some(org_id),
+            department: Some("Operations".to_string()),
+            phone: Some("+1-555-0101".to_string()),
+            address: None,
+            hire_date: Some(Utc::now()),
+            base_salary: Some(120000.0),
+            payment_settings: PaymentSettings {
+                payment_method: PaymentMethod::DirectDeposit,
+                account_details: "****5678".to_string(),
+                payment_interval: PaymentInterval::BiWeekly,
+                currency: crate::types::Currency::USD,
+                automatic_payout: true,
+                payout_threshold: None,
+            },
+            notification_preferences: vec![],
+            permissions: default_permissions_for_role(&UserRole::Manager),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            last_login: Some(Utc::now()),
+            is_active: true,
+        },
+        User {
+            id: Uuid::new_v4(),
+            name: "Mike Williams".to_string(),
+            email: "mike@company.com".to_string(),
+            role: UserRole::Worker,
+            organization_id: Some(org_id),
+            department: Some("Field Operations".to_string()),
+            phone: Some("+1-555-0102".to_string()),
+            address: None,
+            hire_date: Some(Utc::now()),
+            base_salary: Some(65000.0),
+            payment_settings: PaymentSettings {
+                payment_method: PaymentMethod::BankTransfer,
+                account_details: "****9012".to_string(),
+                payment_interval: PaymentInterval::Weekly,
+                currency: crate::types::Currency::USD,
+                automatic_payout: true,
+                payout_threshold: None,
+            },
+            notification_preferences: vec![],
+            permissions: default_permissions_for_role(&UserRole::Worker),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            last_login: Some(Utc::now()),
+            is_active: true,
+        },
+        User {
+            id: Uuid::new_v4(),
+            name: "Guest User".to_string(),
+            email: "guest@company.com".to_string(),
+            role: UserRole::Guest,
+            organization_id: Some(org_id),
+            department: Some("External".to_string()),
+            phone: None,
+            address: None,
+            hire_date: None,
+            base_salary: None,
+            payment_settings: PaymentSettings::default(),
+            notification_preferences: vec![],
+            permissions: default_permissions_for_role(&UserRole::Guest),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            last_login: None,
+            is_active: true,
+        },
+    ]
 }

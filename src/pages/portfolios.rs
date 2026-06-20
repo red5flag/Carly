@@ -1,6 +1,6 @@
-use crate::models::{Asset, AssetGroup, AssetStatus, Portfolio, PortfolioStatus};
+use crate::models::{Asset, AssetGroup, AssetStatus, Portfolio};
 use crate::stores::use_app_store;
-use crate::types::{AssetType, ViewMode};
+use crate::types::{AssetType, UserRole, ViewMode};
 use leptos::prelude::*;
 use uuid::Uuid;
 
@@ -8,81 +8,118 @@ use uuid::Uuid;
 pub fn PortfoliosPage() -> impl IntoView {
     let app_store = use_app_store();
 
-    // Mock portfolios data
-    let portfolios = Memo::new(move |_| {
-        let mut portfolios = vec![
-            Portfolio {
-                id: Uuid::new_v4(),
-                name: "Commercial Real Estate".to_string(),
-                description: Some("Office buildings and retail spaces".to_string()),
-                owner_id: Uuid::new_v4(),
-                organization_id: None,
-                asset_groups: vec![
-                    create_mock_asset_group("Downtown Properties", vec![
-                        create_mock_asset("Main Office Building", AssetType::RealEstate, 2500000.0, 3200000.0),
-                        create_mock_asset("Retail Plaza", AssetType::RealEstate, 1200000.0, 1450000.0),
-                    ]),
-                    create_mock_asset_group("Suburban Offices", vec![
-                        create_mock_asset("Tech Park Building A", AssetType::RealEstate, 1800000.0, 2100000.0),
-                        create_mock_asset("Tech Park Building B", AssetType::RealEstate, 1600000.0, 1850000.0),
-                    ]),
-                ],
-                currency: crate::types::Currency::USD,
-                total_value: 8600000.0,
-                purchase_value: 7100000.0,
-                profit_loss: 1500000.0,
-                profit_loss_percent: 21.1,
-                revenue: 450000.0,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
-                tags: vec!["real-estate".to_string(), "commercial".to_string()],
-                status: PortfolioStatus::Active,
-                view_mode: ViewMode::List,
-                documents: vec![],
-            },
-            Portfolio {
-                id: Uuid::new_v4(),
-                name: "Fleet & Equipment".to_string(),
-                description: Some("Company vehicles and machinery".to_string()),
-                owner_id: Uuid::new_v4(),
-                organization_id: None,
-                asset_groups: vec![
-                    create_mock_asset_group("Delivery Fleet", vec![
-                        create_mock_asset("Truck Fleet", AssetType::Vehicle, 450000.0, 380000.0),
-                        create_mock_asset("Van Fleet", AssetType::Vehicle, 180000.0, 165000.0),
-                    ]),
-                    create_mock_asset_group("Manufacturing Equipment", vec![
-                        create_mock_asset("CNC Machines", AssetType::Equipment, 800000.0, 920000.0),
-                        create_mock_asset("Assembly Line", AssetType::Equipment, 600000.0, 650000.0),
-                    ]),
-                ],
-                currency: crate::types::Currency::USD,
-                total_value: 2115000.0,
-                purchase_value: 2030000.0,
-                profit_loss: 85000.0,
-                profit_loss_percent: 4.2,
-                revenue: 180000.0,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
-                tags: vec!["fleet".to_string(), "equipment".to_string()],
-                status: PortfolioStatus::Active,
-                view_mode: ViewMode::List,
-                documents: vec![],
-            },
-        ];
+    // Read portfolios from AppStore
+    let portfolios = Memo::new(move |_| app_store.get().portfolios.clone());
+    let view_mode = move || app_store.get().portfolio_view_mode.clone();
+    let selected_id = move || app_store.get().selected_portfolio_id;
+    let can_edit = move || {
+        let role = app_store.get().current_user.role.clone();
+        role == UserRole::Owner || role == UserRole::Manager
+    };
 
-        // Recalculate values
-        for p in &mut portfolios {
-            for g in &mut p.asset_groups {
-                g.recalculate_values();
+    // Form signals for add portfolio
+    let (show_add_portfolio, set_show_add_portfolio) = signal(false);
+    let (new_name, set_new_name) = signal(String::new());
+    let (new_desc, set_new_desc) = signal(String::new());
+
+    // Form signals for add asset group
+    let (show_add_group, set_show_add_group) = signal(Option::<Uuid>::None);
+    let (new_group_name, set_new_group_name) = signal(String::new());
+
+    // Form signals for add asset
+    let (show_add_asset, set_show_add_asset) = signal(AssetTarget::default());
+    let (new_asset_name, set_new_asset_name) = signal(String::new());
+    let (new_asset_type, set_new_asset_type) = signal(AssetType::RealEstate);
+    let (new_asset_value, set_new_asset_value) = signal(String::new());
+
+    let on_toggle_view = move |id: Uuid| {
+        app_store.update(|s| {
+            if s.selected_portfolio_id == Some(id) {
+                s.selected_portfolio_id = None;
+            } else {
+                s.selected_portfolio_id = Some(id);
             }
-            p.recalculate_values();
-        }
+        });
+    };
 
-        portfolios
+    let on_add_portfolio = move |_| {
+        let name = new_name.get();
+        if name.trim().is_empty() {
+            return;
+        }
+        let owner_id = app_store.get().current_user.id;
+        let mut p = Portfolio::new(name, owner_id, crate::types::Currency::USD);
+        p.description = if new_desc.get().trim().is_empty() {
+            None
+        } else {
+            Some(new_desc.get())
+        };
+        app_store.update(|s| s.add_portfolio(p));
+        set_new_name.set(String::new());
+        set_new_desc.set(String::new());
+        set_show_add_portfolio.set(false);
+    };
+
+    let on_delete_portfolio = move |id: Uuid| {
+        app_store.update(|s| {
+            s.remove_portfolio(id);
+            if s.selected_portfolio_id == Some(id) {
+                s.selected_portfolio_id = None;
+            }
+        });
+    };
+
+    let on_add_group = Callback::new(move |portfolio_id: Uuid| {
+        let name = new_group_name.get();
+        if name.trim().is_empty() {
+            return;
+        }
+        let group = create_mock_asset_group(&name, vec![]);
+        app_store.update(|s| {
+            if let Some(p) = s.get_portfolio_mut(portfolio_id) {
+                p.asset_groups.push(group);
+                p.recalculate_values();
+            }
+        });
+        set_new_group_name.set(String::new());
+        set_show_add_group.set(None);
     });
 
-    let view_mode = move || app_store.get().portfolio_view_mode.clone();
+    let on_add_asset = Callback::new(move |target: AssetTarget| {
+        let name = new_asset_name.get();
+        if name.trim().is_empty() {
+            return;
+        }
+        let value: f64 = new_asset_value.get().parse().unwrap_or(0.0);
+        let _asset = create_mock_asset(&name, new_asset_type.get(), value, value);
+        app_store.update(|s| {
+            match target {
+                AssetTarget::PortfolioDirect(pid) => {
+                    if let Some(p) = s.get_portfolio_mut(pid) {
+                        p.assets.push(_asset);
+                        p.recalculate_values();
+                    }
+                }
+                AssetTarget::Group(pid, gid) => {
+                    if let Some(p) = s.get_portfolio_mut(pid) {
+                        if let Some(g) = p.asset_groups.iter_mut().find(|g| g.id == gid) {
+                            g.assets.push(_asset);
+                            g.recalculate_values();
+                        }
+                        p.recalculate_values();
+                    }
+                }
+                AssetTarget::None => {}
+            }
+        });
+        set_new_asset_name.set(String::new());
+        set_new_asset_value.set(String::new());
+        set_show_add_asset.set(AssetTarget::default());
+    });
+
+    let selected_portfolio = move || {
+        selected_id().and_then(|id| portfolios.get().into_iter().find(|p| p.id == id))
+    };
 
     view! {
         <div class="home-screen">
@@ -91,7 +128,7 @@ pub fn PortfoliosPage() -> impl IntoView {
                 <p>"Manage your asset portfolios"</p>
             </div>
 
-            // View Toggle
+            // View Toggle + Add button
             <div class="view-toggle">
                 <button
                     class="view-btn"
@@ -111,7 +148,37 @@ pub fn PortfoliosPage() -> impl IntoView {
                 >
                     "⊞ Grid"
                 </button>
+                {move || if can_edit() {
+                    view! {
+                        <button
+                            class="view-btn"
+                            class:active=show_add_portfolio
+                            on:click=move |_| set_show_add_portfolio.update(|v| *v = !*v)
+                        >
+                            "+ Add Portfolio"
+                        </button>
+                    }.into_any()
+                } else { ().into_any() }}
             </div>
+
+            // Add Portfolio Form
+            {move || show_add_portfolio.get().then(|| view! {
+                <div class="add-form">
+                    <input
+                        class="login-input"
+                        type="text"
+                        placeholder="Portfolio name"
+                        on:input=move |ev| set_new_name.set(event_target_value(&ev))
+                    />
+                    <input
+                        class="login-input"
+                        type="text"
+                        placeholder="Description (optional)"
+                        on:input=move |ev| set_new_desc.set(event_target_value(&ev))
+                    />
+                    <button class="login-btn" on:click=on_add_portfolio>"Create Portfolio"</button>
+                </div>
+            })}
 
             // Portfolios List
             <div class={move || {
@@ -123,18 +190,22 @@ pub fn PortfoliosPage() -> impl IntoView {
             }}>
                 {move || {
                     let mode = view_mode();
+                    let can = can_edit();
                     portfolios.get()
                         .into_iter()
-                        .map(|portfolio| {
+                        .map(move |portfolio| {
                             let pl_class = if portfolio.profit_loss >= 0.0 {
                                 "positive"
                             } else {
                                 "negative"
                             };
+                            let is_selected = selected_id() == Some(portfolio.id);
+                            let portfolio_id = portfolio.id;
+                            let pid_del = portfolio.id;
 
                             if mode == ViewMode::Grid {
                                 view! {
-                                    <div class="grid-item">
+                                    <div class="grid-item" on:click=move |_| on_toggle_view(portfolio_id)>
                                         <div class="grid-item-img">"🏢"</div>
                                         <div>
                                             <div class="list-item-title">{portfolio.name.clone()}</div>
@@ -150,8 +221,23 @@ pub fn PortfoliosPage() -> impl IntoView {
                                         <div class="card-header">
                                             <span class="card-title">{portfolio.name.clone()}</span>
                                             <div class="card-actions">
-                                                <button class="card-btn">"View"</button>
-                                                <button class="card-btn sell">"Quick Sale"</button>
+                                                <button
+                                                    class="card-btn"
+                                                    class:active=is_selected
+                                                    on:click=move |_| on_toggle_view(portfolio_id)
+                                                >
+                                                    {if is_selected { "Hide Assets" } else { "View Assets" }}
+                                                </button>
+                                                {move || if can {
+                                                    view! {
+                                                        <button
+                                                            class="card-btn sell"
+                                                            on:click=move |_| on_delete_portfolio(pid_del)
+                                                        >
+                                                            "🗑 Delete"
+                                                        </button>
+                                                    }.into_any()
+                                                } else { ().into_any() }}
                                             </div>
                                         </div>
                                         <div class="card-stats">
@@ -180,19 +266,337 @@ pub fn PortfoliosPage() -> impl IntoView {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style="margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--border-color);">
-                                            <div style="font-size: 11px; color: var(--text-secondary);">
-                                                {format!("Revenue: ${:.0}K | Purchase Value: ${:.2}M",
-                                                    portfolio.revenue / 1000.0,
-                                                    portfolio.purchase_value / 1000000.0)}
-                                            </div>
-                                        </div>
                                     </div>
                                 }.into_any()
                             }
                         })
                         .collect::<Vec<_>>()
                 }}
+            </div>
+
+            // Asset Hierarchy Viewer
+            {move || selected_portfolio().map(|portfolio| view! {
+                <AssetViewer
+                    portfolio={portfolio}
+                    can_edit={can_edit()}
+                    show_add_group={show_add_group.get()}
+                    set_show_add_group={set_show_add_group}
+                    _new_group_name={new_group_name}
+                    set_new_group_name={set_new_group_name}
+                    on_add_group={on_add_group}
+                    show_add_asset={show_add_asset.get()}
+                    set_show_add_asset={set_show_add_asset}
+                    new_asset_name={new_asset_name}
+                    set_new_asset_name={set_new_asset_name}
+                    new_asset_type={new_asset_type}
+                    set_new_asset_type={set_new_asset_type}
+                    new_asset_value={new_asset_value}
+                    set_new_asset_value={set_new_asset_value}
+                    on_add_asset={on_add_asset}
+                />
+            })}
+        </div>
+    }
+}
+
+#[derive(Clone, PartialEq, Default)]
+pub enum AssetTarget {
+    #[default]
+    None,
+    PortfolioDirect(Uuid),
+    Group(Uuid, Uuid),
+}
+
+#[component]
+fn AssetViewer(
+    portfolio: Portfolio,
+    can_edit: bool,
+    show_add_group: Option<Uuid>,
+    set_show_add_group: WriteSignal<Option<Uuid>>,
+    _new_group_name: ReadSignal<String>,
+    set_new_group_name: WriteSignal<String>,
+    on_add_group: Callback<Uuid>,
+    show_add_asset: AssetTarget,
+    set_show_add_asset: WriteSignal<AssetTarget>,
+    new_asset_name: ReadSignal<String>,
+    set_new_asset_name: WriteSignal<String>,
+    new_asset_type: ReadSignal<AssetType>,
+    set_new_asset_type: WriteSignal<AssetType>,
+    new_asset_value: ReadSignal<String>,
+    set_new_asset_value: WriteSignal<String>,
+    on_add_asset: Callback<AssetTarget>,
+) -> impl IntoView {
+    let pid = portfolio.id;
+    let show_add_asset_for_groups = show_add_asset.clone();
+
+    view! {
+        <div class="asset-viewer">
+            <div class="welcome-header">
+                <h1>{format!("{} Asset Hierarchy", portfolio.name)}</h1>
+                <p>{format!("{} direct assets, {} asset groups", portfolio.assets.len(), portfolio.asset_groups.len())}</p>
+            </div>
+
+            // Direct Assets section
+            <div class="asset-section">
+                <div class="asset-section-title">
+                    "Direct Assets"
+                    {move || if can_edit {
+                        let pid2 = pid;
+                        view! {
+                            <button
+                                class="add-btn-small"
+                                on:click=move |_| set_show_add_asset.set(AssetTarget::PortfolioDirect(pid2))
+                            >
+                                "+ Add Asset"
+                            </button>
+                        }.into_any()
+                    } else { ().into_any() }}
+                </div>
+
+                {move || {
+                    let target = show_add_asset.clone();
+                    if target == AssetTarget::PortfolioDirect(pid) {
+                        view! {
+                            <div class="add-form">
+                                <input class="login-input" type="text" placeholder="Asset name"
+                                    on:input=move |ev| set_new_asset_name.set(event_target_value(&ev)) />
+                                <select class="login-input"
+                                    on:change=move |ev| {
+                                        let v = event_target_value(&ev);
+                                        let t = match v.as_str() {
+                                            "RealEstate" => AssetType::RealEstate,
+                                            "Vehicle" => AssetType::Vehicle,
+                                            "Equipment" => AssetType::Equipment,
+                                            "Stock" => AssetType::Stock,
+                                            "Bond" => AssetType::Bond,
+                                            "Commodity" => AssetType::Commodity,
+                                            "Digital" => AssetType::Digital,
+                                            "IntellectualProperty" => AssetType::IntellectualProperty,
+                                            _ => AssetType::RealEstate,
+                                        };
+                                        set_new_asset_type.set(t);
+                                    }
+                                >
+                                    <option value="RealEstate">"Real Estate"</option>
+                                    <option value="Vehicle">"Vehicle"</option>
+                                    <option value="Equipment">"Equipment"</option>
+                                    <option value="Stock">"Stock"</option>
+                                    <option value="Bond">"Bond"</option>
+                                    <option value="Commodity">"Commodity"</option>
+                                    <option value="Digital">"Digital"</option>
+                                    <option value="IntellectualProperty">"IP"</option>
+                                </select>
+                                <input class="login-input" type="number" placeholder="Value ($)"
+                                    on:input=move |ev| set_new_asset_value.set(event_target_value(&ev)) />
+                                <button class="login-btn" on:click=move |_| on_add_asset.run(AssetTarget::PortfolioDirect(pid))>
+                                    "Add Asset"
+                                </button>
+                            </div>
+                        }.into_any()
+                    } else { ().into_any() }
+                }}
+
+                {if portfolio.assets.is_empty() {
+                    view! {
+                        <div class="empty-state">
+                            <div class="empty-text">"No direct assets"</div>
+                        </div>
+                    }.into_any()
+                } else {
+                    view! {
+                        <div class="asset-list">
+                            {portfolio.assets.into_iter().map(|asset| view! {
+                                <AssetItem asset={asset} />
+                            }).collect::<Vec<_>>()}
+                        </div>
+                    }.into_any()
+                }}
+            </div>
+
+            // Asset Groups section
+            <div class="asset-section">
+                <div class="asset-section-title">
+                    "Asset Groups"
+                    {move || if can_edit {
+                        let pid2 = pid;
+                        view! {
+                            <button
+                                class="add-btn-small"
+                                on:click=move |_| set_show_add_group.set(Some(pid2))
+                            >
+                                "+ Add Group"
+                            </button>
+                        }.into_any()
+                    } else { ().into_any() }}
+                </div>
+
+                {move || show_add_group.map(|gp| {
+                    if gp == pid {
+                        view! {
+                            <div class="add-form">
+                                <input class="login-input" type="text" placeholder="Group name"
+                                    on:input=move |ev| set_new_group_name.set(event_target_value(&ev)) />
+                                <button class="login-btn" on:click=move |_| on_add_group.run(pid)>
+                                    "Add Group"
+                                </button>
+                            </div>
+                        }.into_any()
+                    } else { ().into_any() }
+                })}
+
+                {if portfolio.asset_groups.is_empty() {
+                    view! {
+                        <div class="empty-state">
+                            <div class="empty-text">"No asset groups"</div>
+                        </div>
+                    }.into_any()
+                } else {
+                    view! {
+                        <div class="asset-list">
+                            {portfolio.asset_groups.into_iter().map(|group| {
+                                let gid = group.id;
+                                let pid2 = pid;
+                                view! {
+                                    <AssetGroupItem
+                                        group={group}
+                                        can_edit={can_edit}
+                                        pid={pid2}
+                                        gid={gid}
+                                        show_add_asset={show_add_asset_for_groups.clone()}
+                                        set_show_add_asset={set_show_add_asset}
+                                        _new_asset_name={new_asset_name}
+                                        set_new_asset_name={set_new_asset_name}
+                                        _new_asset_type={new_asset_type}
+                                        set_new_asset_type={set_new_asset_type}
+                                        _new_asset_value={new_asset_value}
+                                        set_new_asset_value={set_new_asset_value}
+                                        on_add_asset={on_add_asset}
+                                    />
+                                }
+                            }).collect::<Vec<_>>()}
+                        </div>
+                    }.into_any()
+                }}
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn AssetGroupItem(
+    group: AssetGroup,
+    can_edit: bool,
+    pid: Uuid,
+    gid: Uuid,
+    show_add_asset: AssetTarget,
+    set_show_add_asset: WriteSignal<AssetTarget>,
+    _new_asset_name: ReadSignal<String>,
+    set_new_asset_name: WriteSignal<String>,
+    _new_asset_type: ReadSignal<AssetType>,
+    set_new_asset_type: WriteSignal<AssetType>,
+    _new_asset_value: ReadSignal<String>,
+    set_new_asset_value: WriteSignal<String>,
+    on_add_asset: Callback<AssetTarget>,
+) -> impl IntoView {
+    view! {
+        <div class="asset-group">
+            <div class="asset-group-header">
+                <div class="asset-group-icon">"📁"</div>
+                <div>
+                    <div class="asset-group-name">{group.name}</div>
+                    <div class="asset-group-count">{format!("{} assets", group.assets.len())}</div>
+                </div>
+                {move || if can_edit {
+                    let pid2 = pid;
+                    let gid2 = gid;
+                    view! {
+                        <button
+                            class="add-btn-small"
+                            on:click=move |_| set_show_add_asset.set(AssetTarget::Group(pid2, gid2))
+                        >
+                            "+ Add Asset"
+                        </button>
+                    }.into_any()
+                } else { ().into_any() }}
+            </div>
+
+            {move || {
+                if show_add_asset == AssetTarget::Group(pid, gid) {
+                    view! {
+                        <div class="add-form">
+                            <input class="login-input" type="text" placeholder="Asset name"
+                                on:input=move |ev| set_new_asset_name.set(event_target_value(&ev)) />
+                            <select class="login-input"
+                                on:change=move |ev| {
+                                    let v = event_target_value(&ev);
+                                    let t = match v.as_str() {
+                                        "RealEstate" => AssetType::RealEstate,
+                                        "Vehicle" => AssetType::Vehicle,
+                                        "Equipment" => AssetType::Equipment,
+                                        "Stock" => AssetType::Stock,
+                                        "Bond" => AssetType::Bond,
+                                        "Commodity" => AssetType::Commodity,
+                                        "Digital" => AssetType::Digital,
+                                        "IntellectualProperty" => AssetType::IntellectualProperty,
+                                        _ => AssetType::RealEstate,
+                                    };
+                                    set_new_asset_type.set(t);
+                                }
+                            >
+                                <option value="RealEstate">"Real Estate"</option>
+                                <option value="Vehicle">"Vehicle"</option>
+                                <option value="Equipment">"Equipment"</option>
+                                <option value="Stock">"Stock"</option>
+                                <option value="Bond">"Bond"</option>
+                                <option value="Commodity">"Commodity"</option>
+                                <option value="Digital">"Digital"</option>
+                                <option value="IntellectualProperty">"IP"</option>
+                            </select>
+                            <input class="login-input" type="number" placeholder="Value ($)"
+                                on:input=move |ev| set_new_asset_value.set(event_target_value(&ev)) />
+                            <button class="login-btn"
+                                on:click=move |_| on_add_asset.run(AssetTarget::Group(pid, gid))>
+                                "Add Asset"
+                            </button>
+                        </div>
+                    }.into_any()
+                } else { ().into_any() }
+            }}
+
+            <div class="asset-group-assets">
+                {group.assets.into_iter().map(|asset| view! {
+                    <AssetItem asset={asset} />
+                }).collect::<Vec<_>>()}
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn AssetItem(asset: Asset) -> impl IntoView {
+    let pl_class = if asset.profit_loss >= 0.0 { "positive" } else { "negative" };
+    let icon = match asset.asset_type {
+        AssetType::RealEstate => "🏢",
+        AssetType::Vehicle => "🚗",
+        AssetType::Equipment => "⚙️",
+        AssetType::Stock => "📈",
+        AssetType::Bond => "📜",
+        AssetType::Commodity => "🌾",
+        AssetType::Digital => "💻",
+        AssetType::IntellectualProperty => "💡",
+        AssetType::Custom(_) => "📦",
+    };
+
+    view! {
+        <div class="asset-item">
+            <div class="asset-icon">{icon}</div>
+            <div class="asset-info">
+                <div class="asset-name">{asset.name}</div>
+                <div class="asset-type">{format!("{:?}", asset.asset_type)}</div>
+            </div>
+            <div class="asset-value">
+                <div class="asset-current">{format!("${:.2}M", asset.current_value / 1000000.0)}</div>
+                <div class={format!("asset-pl {}", pl_class)}>{format!("${:+.0}K", asset.profit_loss / 1000.0)}</div>
             </div>
         </div>
     }

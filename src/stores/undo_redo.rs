@@ -6,6 +6,26 @@ use uuid::Uuid;
 
 const MAX_HISTORY_SIZE: usize = 100;
 
+// Helper to create an action with user info populated from AppStore
+pub fn create_action(
+    action_type: ActionType,
+    entity_type: &str,
+    description: &str,
+    user_id: Uuid,
+    user_name: &str,
+    user_role: &str,
+    org_id: Option<Uuid>,
+) -> Action {
+    Action::new(
+        action_type,
+        entity_type.to_string(),
+        Uuid::new_v4(),
+        description.to_string(),
+        user_id,
+    )
+    .with_user(user_name.to_string(), user_role.to_string(), org_id)
+}
+
 // Undo/Redo store for complete action history
 #[derive(Clone, Debug)]
 pub struct UndoRedoStore {
@@ -82,8 +102,8 @@ impl UndoRedoStore {
     }
 
     // Get recent actions for history view
-    pub fn get_recent_actions(&self, count: usize) -> Vec<&Action> {
-        self.past.iter().rev().take(count).collect()
+    pub fn get_recent_actions(&self, count: usize) -> Vec<Action> {
+        self.past.iter().rev().take(count).cloned().collect()
     }
 
     // Clear all history
@@ -144,6 +164,11 @@ pub fn format_action_description(action: &Action) -> String {
         ActionType::Setting => format!("Changed setting: {}", action.description),
         ActionType::Payment => format!("Payment: {}", action.description),
         ActionType::Notification => format!("Notification: {}", action.description),
+        ActionType::Search => format!("Search: {}", action.description),
+        ActionType::Undo => format!("Undo: {}", action.description),
+        ActionType::Redo => format!("Redo: {}", action.description),
+        ActionType::Login => format!("Login: {}", action.description),
+        ActionType::Logout => format!("Logout: {}", action.description),
     }
 }
 

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 // Transaction record for financial tracking
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Transaction {
     pub id: Uuid,
     pub transaction_type: TransactionType,
@@ -33,7 +33,7 @@ pub enum TransactionStatus {
     Cancelled,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EntityReference {
     pub entity_type: EntityType,
     pub entity_id: Uuid,

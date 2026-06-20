@@ -21,6 +21,7 @@ pub struct User {
     pub base_salary: Option<f64>,
     pub payment_settings: PaymentSettings,
     pub notification_preferences: Vec<(NotificationTrigger, Vec<NotificationType>)>,
+    pub permissions: Vec<Permission>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_login: Option<DateTime<Utc>>,
@@ -53,6 +54,7 @@ impl Default for PaymentSettings {
 impl User {
     pub fn new(name: String, email: String, role: UserRole) -> Self {
         let now = Utc::now();
+        let permissions = default_permissions_for_role(&role);
         Self {
             id: Uuid::new_v4(),
             name,
@@ -66,6 +68,7 @@ impl User {
             base_salary: None,
             payment_settings: PaymentSettings::default(),
             notification_preferences: Vec::new(),
+            permissions,
             created_at: now,
             updated_at: now,
             last_login: None,
@@ -86,13 +89,59 @@ impl User {
             return Err("Insufficient permissions to change role".to_string());
         }
         self.role = new_role;
+        self.permissions = default_permissions_for_role(&self.role);
         self.updated_at = Utc::now();
         Ok(())
+    }
+
+    pub fn has_permission(&self, permission: &Permission) -> bool {
+        self.permissions.contains(permission)
+    }
+
+    pub fn toggle_permission(&mut self, permission: Permission) {
+        if self.permissions.contains(&permission) {
+            self.permissions.retain(|p| p != &permission);
+        } else {
+            self.permissions.push(permission);
+        }
+        self.updated_at = Utc::now();
+    }
+}
+
+pub fn default_permissions_for_role(role: &UserRole) -> Vec<Permission> {
+    match role {
+        UserRole::Owner => vec![
+            Permission::ViewAll,
+            Permission::CreateOrganization,
+            Permission::EditAll,
+            Permission::DeleteAll,
+            Permission::ManageUsers,
+            Permission::ManageRoles,
+            Permission::ManagePayments,
+            Permission::ManageSettings,
+            Permission::ExportData,
+            Permission::ImportData,
+        ],
+        UserRole::Manager => vec![
+            Permission::ViewOrganization,
+            Permission::CreateOrganization,
+            Permission::EditOrganization,
+            Permission::DeleteOrganization,
+            Permission::ManageUsers,
+            Permission::ManagePayments,
+        ],
+        UserRole::Worker => vec![
+            Permission::ViewOwn,
+            Permission::CreateOwn,
+            Permission::EditOwn,
+            Permission::DeleteOwn,
+        ],
+        UserRole::Guest => vec![Permission::ViewOwn],
     }
 }
 
 // Organization
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Organization {
     pub id: Uuid,
     pub name: String,

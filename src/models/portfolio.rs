@@ -11,6 +11,7 @@ pub struct Portfolio {
     pub description: Option<String>,
     pub owner_id: Uuid,
     pub organization_id: Option<Uuid>,
+    pub assets: Vec<Asset>,
     pub asset_groups: Vec<AssetGroup>,
     pub currency: Currency,
     pub total_value: f64,
@@ -43,6 +44,7 @@ impl Portfolio {
             description: None,
             owner_id,
             organization_id: None,
+            assets: Vec::new(),
             asset_groups: Vec::new(),
             currency,
             total_value: 0.0,
@@ -64,6 +66,12 @@ impl Portfolio {
         self.purchase_value = 0.0;
         self.revenue = 0.0;
 
+        for asset in &self.assets {
+            self.total_value += asset.current_value;
+            self.purchase_value += asset.purchase_value;
+            self.revenue += asset.revenue;
+        }
+
         for group in &self.asset_groups {
             self.total_value += group.total_value;
             self.purchase_value += group.purchase_value;
@@ -77,9 +85,9 @@ impl Portfolio {
     }
 
     pub fn get_all_assets(&self) -> Vec<&Asset> {
-        self.asset_groups
+        self.assets
             .iter()
-            .flat_map(|g| g.assets.iter())
+            .chain(self.asset_groups.iter().flat_map(|g| g.assets.iter()))
             .collect()
     }
 
