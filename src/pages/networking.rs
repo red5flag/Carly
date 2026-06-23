@@ -1,4 +1,4 @@
-use crate::models::{default_permissions_for_role, Payment, PaymentSettings, PaymentStatus, Permission, User};
+use crate::models::{default_permissions_for_role, Payment, PaymentSettings, PaymentStatus, Permission, User, UserActivity, UserAssignment};
 use crate::stores::use_app_store;
 use crate::types::{PaymentInterval, PaymentMethod, UserRole};
 use chrono::Utc;
@@ -9,52 +9,45 @@ use uuid::Uuid;
 pub fn NetworkingPage() -> impl IntoView {
     let app_store = use_app_store();
 
-    // Users come from app store, fall back to default mock users if empty
+    // Users come from app store, fall back to default mock users if empty, sorted by role
     let users = Memo::new(move |_| {
-        let store_users = app_store.get().organization_users.clone();
-        if store_users.is_empty() {
+        let store = app_store.get();
+        let store_users = store.organization_users.clone();
+        let current_org = store.current_organization_id.or(store.current_user.organization_id);
+        let mut users: Vec<_> = if store_users.is_empty() {
             default_mock_users()
         } else {
             store_users
         }
+        .into_iter()
+        .filter(|u| current_org.is_none() || u.organization_id == current_org)
+        .collect();
+        users.sort_by(|a, b| b.role.level().cmp(&a.role.level()));
+        users
     });
 
-    // New user form state
-    let (new_name, set_new_name) = signal(String::new());
-    let (new_email, set_new_email) = signal(String::new());
-    let (new_role, set_new_role) = signal(UserRole::Worker);
-
-    let on_add_user = move |_| {
-        let name = new_name.get().trim().to_string();
-        let email = new_email.get().trim().to_string();
-        if name.is_empty() || email.is_empty() {
-            return;
-        }
-        let mut user = User::new(name, email, new_role.get());
-        user.organization_id = app_store.get().current_user.organization_id;
-        app_store.update(|s| s.add_organization_user(user));
-        set_new_name.set(String::new());
-        set_new_email.set(String::new());
-        set_new_role.set(UserRole::Worker);
-    };
-
-    let on_update_role = move |id: Uuid, role: UserRole| {
+    let _on_update_role = move |id: Uuid, role: UserRole| {
         app_store.update(|s| {
             let _ = s.update_user_role(id, role);
         });
     };
 
-    let on_remove_user = move |id: Uuid| {
+    let _on_remove_user = move |id: Uuid| {
         app_store.update(|s| {
             s.remove_organization_user(id);
         });
     };
 
-    let on_toggle_permission = move |id: Uuid, permission: Permission| {
+    let _on_toggle_permission = move |id: Uuid, permission: Permission| {
         app_store.update(|s| {
             s.toggle_user_permission(id, permission);
         });
     };
+
+    let (edit_mode, set_edit_mode) = signal(false);
+    let (_people_open, _set_people_open) = signal(false);
+    let (active_tab, set_active_tab) = signal("organizations");
+    let (member_view, set_member_view) = signal("list");
 
     // Mock transactions
     let transactions = Memo::new(move |_| {
@@ -96,55 +89,378 @@ pub fn NetworkingPage() -> impl IntoView {
         ]
     });
 
+    let render_tab_content = move || {
+        let tab = active_tab.get();
+        if tab == "organizations" {
+            render_organizations(users).into_any()
+        } else if tab == "members" {
+            render_members(users, member_view, set_member_view).into_any()
+        } else if tab == "activity" {
+            render_activity().into_any()
+        } else {
+            render_payments(transactions).into_any()
+        }
+    };
+
     view! {
         <div class="home-screen">
-            <div class="welcome-header">
-                <h1>"Networking"</h1>
-                <p>"Organization members and payments"</p>
+            // Quick tabs
+            <div class="net-quick-tabs">
+                <button
+                    class="net-quick-tab"
+                    class:active={move || active_tab.get() == "organizations"}
+                    on:click=move |_| set_active_tab.set("organizations")
+                >
+                    "Organizations"
+                </button>
+                <button
+                    class="net-quick-tab"
+                    class:active={move || active_tab.get() == "members"}
+                    on:click=move |_| set_active_tab.set("members")
+                >
+                    {move || format!("Members {}", users.get().len())}
+                </button>
+                <button
+                    class="net-quick-tab"
+                    class:active={move || active_tab.get() == "activity"}
+                    on:click=move |_| set_active_tab.set("activity")
+                >
+                    "Activity"
+                </button>
+                <button
+                    class="net-quick-tab"
+                    class:active={move || active_tab.get() == "payments"}
+                    on:click=move |_| set_active_tab.set("payments")
+                >
+                    "Payments"
+                </button>
             </div>
 
             // Organization Stats
-            <div class="data-card">
-                <div class="card-header">
-                    <span class="card-title">"Organization Overview"</span>
+            <div class="org-metrics-bar">
+                <div class="org-metric">
+                    <div class="org-metric-value">{move || app_store.get().organizations.len()}</div>
+                    <div class="org-metric-label">"Organizations"</div>
                 </div>
-                <div class="card-stats">
-                    <div class="stat-item">
-                        <div class="stat-label">"Total Members"</div>
-                        <div class="stat-value">{move || users.get().len()}</div>
+                <div class="org-metric">
+                    <div class="org-metric-value">{move || users.get().len()}</div>
+                    <div class="org-metric-label">"Members"</div>
+                </div>
+                <div class="org-metric">
+                    <div class="org-metric-value">
+                        {move || {
+                            transactions.get()
+                                .iter()
+                                .filter(|t| t.status == PaymentStatus::Pending)
+                                .count()
+                        }}
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">"Active Now"</div>
-                        <div class="stat-value">"2"</div>
+                    <div class="org-metric-label">"Pending"</div>
+                </div>
+                <div class="org-metric">
+                    <div class="org-metric-value">
+                        {move || {
+                            let total: f64 = transactions.get()
+                                .iter()
+                                .filter(|t| t.status == PaymentStatus::Completed)
+                                .map(|t| t.amount)
+                                .sum();
+                            format!("${:.0}K", total / 1000.0)
+                        }}
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-label">"Pending Payments"</div>
-                        <div class="stat-value">
-                            {move || {
-                                transactions.get()
-                                    .iter()
-                                    .filter(|t| t.status == PaymentStatus::Pending)
-                                    .count()
-                            }}
-                        </div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-label">"Total Payouts"</div>
-                        <div class="stat-value">
-                            {move || {
-                                let total: f64 = transactions.get()
-                                    .iter()
-                                    .filter(|t| t.status == PaymentStatus::Completed)
-                                    .map(|t| t.amount)
-                                    .sum();
-                                format!("${:.0}K", total / 1000.0)
-                            }}
-                        </div>
-                    </div>
+                    <div class="org-metric-label">"Payouts"</div>
                 </div>
             </div>
 
-            // Add User Form
+            // Edit action bar
+            <div class="net-action-bar">
+                <button
+                    class="net-action-btn"
+                    class:active={move || edit_mode.get()}
+                    on:click=move |_| set_edit_mode.update(|v| *v = !*v)
+                >
+                    "Edit"
+                </button>
+                <button
+                    class="net-action-btn"
+                    on:click=move |_| app_store.update(|s| s.toggle_networking_add_member())
+                >
+                    "Add"
+                </button>
+                <button
+                    class="net-action-btn"
+                    on:click=move |_| {
+                        if let Some(first) = users.get().first() {
+                            app_store.update(|s| { let _ = s.remove_organization_user(first.id); });
+                        }
+                    }
+                >
+                    "Remove"
+                </button>
+                <button
+                    class="net-action-btn"
+                    on:click=move |_| app_store.update(|s| s.open_search())
+                >
+                    "Search"
+                </button>
+            </div>
+
+            // Tab content
+            {render_tab_content}
+        </div>
+    }
+}
+
+fn render_organizations(_users: Memo<Vec<User>>) -> impl IntoView {
+    let app_store = use_app_store();
+    view! {
+        <div class="net-tab-content">
+            {move || {
+                let store = app_store.get();
+                let orgs = store.organizations.clone();
+                let all_users = if store.organization_users.is_empty() {
+                    default_mock_users()
+                } else {
+                    store.organization_users.clone()
+                };
+                if orgs.is_empty() {
+                    view! {
+                        <div class="data-card">
+                            <div class="empty-state">
+                                <div class="empty-text">"No organizations yet"</div>
+                            </div>
+                        </div>
+                    }.into_any()
+                } else {
+                    orgs.into_iter().map(|org| {
+                        let mut org_users: Vec<User> = all_users.iter()
+                            .filter(|u| u.organization_id == Some(org.id))
+                            .cloned()
+                            .collect();
+                        org_users.sort_by(|a, b| b.role.level().cmp(&a.role.level()));
+                        view! {
+                            <div class="data-card">
+                                <div class="card-header">
+                                    <span class="card-title">{org.name.clone()}</span>
+                                    <span class="stat-value">{format!("{} members", org_users.len())}</span>
+                                </div>
+                                <div class="net-org-members">
+                                    {org_users.into_iter().map(|user| view! {
+                                        <UserCard user={user} />
+                                    }).collect::<Vec<_>>()}
+                                </div>
+                            </div>
+                        }
+                    }).collect::<Vec<_>>().into_any()
+                }
+            }}
+        </div>
+    }
+}
+
+fn render_members(
+    users: Memo<Vec<User>>,
+    member_view: ReadSignal<&'static str>,
+    set_member_view: WriteSignal<&'static str>,
+) -> impl IntoView {
+    view! {
+        <div class="net-tab-content">
+            <div class="view-toggle">
+                <button
+                    class="view-btn"
+                    class:active={move || member_view.get() == "list"}
+                    on:click=move |_| set_member_view.set("list")
+                >
+                    "List"
+                </button>
+                <button
+                    class="view-btn"
+                    class:active={move || member_view.get() == "grid"}
+                    on:click=move |_| set_member_view.set("grid")
+                >
+                    "Grid"
+                </button>
+            </div>
+            <div class={move || if member_view.get() == "grid" { "net-members-grid" } else { "net-members-list" }}>
+                {move || {
+                    users.get().into_iter().map(|user| view! {
+                        <UserCard user={user} />
+                    }).collect::<Vec<_>>()
+                }}
+            </div>
+        </div>
+    }
+}
+
+fn render_activity() -> impl IntoView {
+    let app_store = use_app_store();
+    view! {
+        <div class="net-tab-content">
+            {move || {
+                let store = app_store.get();
+                let all_users = if store.organization_users.is_empty() {
+                    default_mock_users()
+                } else {
+                    store.organization_users.clone()
+                };
+                let activities: Vec<_> = all_users.iter()
+                    .flat_map(|u| u.activity_log.iter().map(move |a| (u.clone(), a.clone())))
+                    .collect();
+                if activities.is_empty() {
+                    view! {
+                        <div class="data-card">
+                            <div class="empty-state">
+                                <div class="empty-text">"No activity yet"</div>
+                            </div>
+                        </div>
+                    }.into_any()
+                } else {
+                    activities.into_iter().map(|(user, activity)| {
+                        view! {
+                            <div class="list-item">
+                                <div class="list-item-left">
+                                    <div class="list-item-title">{format!("{} {}", user.name, activity.action)}</div>
+                                    <div class="list-item-subtitle">{format!("{}: {} - {}", activity.target_type, activity.target_name, activity.reason.as_deref().unwrap_or(""))}</div>
+                                </div>
+                                <div class="list-item-right">
+                                    <div class="stat-value">{activity.timestamp.format("%Y-%m-%d").to_string()}</div>
+                                </div>
+                            </div>
+                        }
+                    }).collect::<Vec<_>>().into_any()
+                }
+            }}
+        </div>
+    }
+}
+
+fn render_payments(transactions: Memo<Vec<Payment>>) -> impl IntoView {
+    view! {
+        <div class="net-tab-content">
+            <div class="data-card">
+                <div class="card-header">
+                    <span class="card-title">"Recent Payments"</span>
+                </div>
+                <div class="data-list">
+                    {move || {
+                        transactions.get().into_iter().map(|payment| {
+                            let status_class = match payment.status {
+                                PaymentStatus::Completed => "positive",
+                                PaymentStatus::Pending => "",
+                                PaymentStatus::Failed => "negative",
+                                _ => "",
+                            };
+                            let status_icon = match payment.status {
+                                PaymentStatus::Completed => "✓",
+                                PaymentStatus::Pending => "⏳",
+                                PaymentStatus::Scheduled => "📅",
+                                PaymentStatus::Processing => "⚙️",
+                                PaymentStatus::Failed => "✗",
+                                PaymentStatus::Cancelled => "⊘",
+                            };
+                            view! {
+                                <div class="list-item">
+                                    <div class="list-item-left">
+                                        <div class="list-item-title">
+                                            {format!("{} {}", status_icon,
+                                                payment.description.as_deref().unwrap_or("Payment")
+                                            )}
+                                        </div>
+                                        <div class="list-item-subtitle">
+                                            {format!("{:?} - {:?}",
+                                                payment.payment_method,
+                                                payment.status
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div class="list-item-right">
+                                        <div class={format!("list-item-value {}", status_class)}>
+                                            {format!("${:.0}", payment.amount)}
+                                        </div>
+                                        {payment.is_recurring.then(|| {
+                                            view! {
+                                                <div style="font-size: 10px; color: var(--text-secondary);">
+                                                    "🔄 Recurring"
+                                                </div>
+                                            }
+                                        })}
+                                    </div>
+                                </div>
+                            }
+                        }).collect::<Vec<_>>()
+                    }}
+                </div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn UserCard(user: User) -> impl IntoView {
+    let avatar = user.avatar_url.clone().unwrap_or_else(|| {
+        format!("https://api.dicebear.com/7.x/avataaars/svg?seed={}", user.id)
+    });
+    let role_label = format!("{:?}", user.role);
+    let username = user.username.clone().unwrap_or_else(|| user.name.clone());
+    let assignment = user.assignments.first().cloned();
+
+    view! {
+        <div class="net-user-card">
+            <img class="net-user-avatar" src={avatar} alt={user.name.clone()} />
+            <div class="net-user-info">
+                <div class="net-user-name">{user.name.clone()}</div>
+                <div class="net-user-meta">{format!("@{} • {}", username, user.email)}</div>
+                <div class="net-user-role">{role_label}</div>
+                {if let Some(a) = assignment {
+                    view! {
+                        <div class="net-user-assignment">
+                            {format!("Assigned to {}: {}", a.target_type, a.target_name)}
+                            {a.duration_days.map(|d| format!(" • {} days", d)).unwrap_or_default()}
+                            {a.reason.map(|r| format!(" • {}", r)).unwrap_or_default()}
+                        </div>
+                    }.into_any()
+                } else { ().into_any() }}
+            </div>
+        </div>
+    }
+}
+
+#[component]
+pub fn AddTeamMemberPage() -> impl IntoView {
+    let app_store = use_app_store();
+
+    let (new_name, set_new_name) = signal(String::new());
+    let (new_username, set_new_username) = signal(String::new());
+    let (new_email, set_new_email) = signal(String::new());
+    let (new_role, set_new_role) = signal(UserRole::Worker);
+
+    let on_add_user = move |_| {
+        let name = new_name.get().trim().to_string();
+        let email = new_email.get().trim().to_string();
+        if name.is_empty() || email.is_empty() {
+            return;
+        }
+        let username = new_username.get().trim().to_string();
+        let avatar = if username.is_empty() {
+            format!("https://api.dicebear.com/7.x/avataaars/svg?seed={}", name)
+        } else {
+            format!("https://api.dicebear.com/7.x/avataaars/svg?seed={}", username)
+        };
+        let mut user = User::new(name, email, new_role.get());
+        user.username = if username.is_empty() { None } else { Some(username) };
+        user.avatar_url = Some(avatar);
+        let store = app_store.get();
+        user.organization_id = store.current_organization_id.or(store.current_user.organization_id);
+        drop(store);
+        app_store.update(|s| s.add_organization_user(user));
+        set_new_name.set(String::new());
+        set_new_username.set(String::new());
+        set_new_email.set(String::new());
+        set_new_role.set(UserRole::Worker);
+    };
+
+    view! {
+        <div class="home-screen">
             <div class="data-card">
                 <div class="card-header">
                     <span class="card-title">"Add Team Member"</span>
@@ -157,6 +473,16 @@ pub fn NetworkingPage() -> impl IntoView {
                         placeholder="Full name"
                         prop:value=new_name
                         on:input=move |ev| set_new_name.set(event_target_value(&ev))
+                    />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">"Username"</label>
+                    <input
+                        class="form-input"
+                        type="text"
+                        placeholder="Username"
+                        prop:value=new_username
+                        on:input=move |ev| set_new_username.set(event_target_value(&ev))
                     />
                 </div>
                 <div class="form-group">
@@ -178,160 +504,25 @@ pub fn NetworkingPage() -> impl IntoView {
                             let value = event_target_value(&ev);
                             set_new_role.set(match value.as_str() {
                                 "Owner" => UserRole::Owner,
+                                "Director" => UserRole::Director,
+                                "SeniorManager" => UserRole::SeniorManager,
                                 "Manager" => UserRole::Manager,
                                 "Worker" => UserRole::Worker,
+                                "Contractor" => UserRole::Contractor,
                                 _ => UserRole::Guest,
                             });
                         }
                     >
                         <option value="Owner">"Owner"</option>
+                        <option value="Director">"Director"</option>
+                        <option value="SeniorManager">"Senior Manager"</option>
                         <option value="Manager">"Manager"</option>
                         <option value="Worker">"Worker"</option>
+                        <option value="Contractor">"Contractor"</option>
                         <option value="Guest">"Guest"</option>
                     </select>
                 </div>
                 <button class="card-btn" on:click=on_add_user>"Add Member"</button>
-            </div>
-
-            // Users List with Role Management
-            <div class="data-card">
-                <div class="card-header">
-                    <span class="card-title">"Team Members & Roles"</span>
-                </div>
-                <div class="data-list">
-                    {move || {
-                        users.get()
-                            .into_iter()
-                            .map(|user| {
-                                let role_icon = match user.role {
-                                    UserRole::Owner => "👑",
-                                    UserRole::Manager => "⭐",
-                                    UserRole::Worker => "👤",
-                                    UserRole::Guest => "🔒",
-                                };
-                                view! {
-                                    <div class="list-item role-management-item">
-                                        <div class="list-item-left">
-                                            <div class="list-item-title">
-                                                {format!("{} {}", role_icon, user.name)}
-                                            </div>
-                                            <div class="list-item-subtitle">
-                                                {user.email.clone()}
-                                            </div>
-                                            <div class="permission-list">
-                                                {[
-                                                    (Permission::ViewOrganization, "View"),
-                                                    (Permission::EditOrganization, "Edit"),
-                                                    (Permission::ManageUsers, "Users"),
-                                                    (Permission::ManagePayments, "Payments"),
-                                                ].into_iter().map(|(permission, label)| {
-                                                    let has = user.has_permission(&permission);
-                                                    let user_id = user.id;
-                                                    view! {
-                                                        <label class="permission-tag" class:active=has>
-                                                            <input
-                                                                type="checkbox"
-                                                                checked=has
-                                                                on:change=move |_| on_toggle_permission(user_id, permission.clone())
-                                                            />
-                                                            {label}
-                                                        </label>
-                                                    }
-                                                }).collect::<Vec<_>>()}
-                                            </div>
-                                        </div>
-                                        <div class="list-item-right role-actions">
-                                            <select
-                                                class="role-select"
-                                                prop:value={move || format!("{:?}", user.role)}
-                                                on:change=move |ev| {
-                                                    let value = event_target_value(&ev);
-                                                    let role = match value.as_str() {
-                                                        "Owner" => UserRole::Owner,
-                                                        "Manager" => UserRole::Manager,
-                                                        "Worker" => UserRole::Worker,
-                                                        _ => UserRole::Guest,
-                                                    };
-                                                    on_update_role(user.id, role);
-                                                }
-                                            >
-                                                <option value="Owner">"Owner"</option>
-                                                <option value="Manager">"Manager"</option>
-                                                <option value="Worker">"Worker"</option>
-                                                <option value="Guest">"Guest"</option>
-                                            </select>
-                                            <button
-                                                class="card-btn danger"
-                                                on:click=move |_| on_remove_user(user.id)
-                                            >
-                                                "Remove"
-                                            </button>
-                                        </div>
-                                    </div>
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                    }}
-                </div>
-            </div>
-
-            // Payment History
-            <div class="data-card">
-                <div class="card-header">
-                    <span class="card-title">"Recent Payments"</span>
-                </div>
-                <div class="data-list">
-                    {move || {
-                        transactions.get()
-                            .into_iter()
-                            .map(|payment| {
-                                let status_class = match payment.status {
-                                    PaymentStatus::Completed => "positive",
-                                    PaymentStatus::Pending => "",
-                                    PaymentStatus::Failed => "negative",
-                                    _ => "",
-                                };
-                                let status_icon = match payment.status {
-                                    PaymentStatus::Completed => "✓",
-                                    PaymentStatus::Pending => "⏳",
-                                    PaymentStatus::Scheduled => "📅",
-                                    PaymentStatus::Processing => "⚙️",
-                                    PaymentStatus::Failed => "✗",
-                                    PaymentStatus::Cancelled => "⊘",
-                                };
-                                view! {
-                                    <div class="list-item">
-                                        <div class="list-item-left">
-                                            <div class="list-item-title">
-                                                {format!("{} {}", status_icon,
-                                                    payment.description.as_deref().unwrap_or("Payment")
-                                                )}
-                                            </div>
-                                            <div class="list-item-subtitle">
-                                                {format!("{:?} - {:?}",
-                                                    payment.payment_method,
-                                                    payment.status
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div class="list-item-right">
-                                            <div class={format!("list-item-value {}", status_class)}>
-                                                {format!("${:.0}", payment.amount)}
-                                            </div>
-                                            {payment.is_recurring.then(|| {
-                                                view! {
-                                                    <div style="font-size: 10px; color: var(--text-secondary);">
-                                                        "🔄 Recurring"
-                                                    </div>
-                                                }
-                                            })}
-                                        </div>
-                                    </div>
-                                }
-                            })
-                            .collect::<Vec<_>>()
-                    }}
-                </div>
             </div>
         </div>
     }
@@ -343,9 +534,26 @@ fn default_mock_users() -> Vec<User> {
         User {
             id: Uuid::new_v4(),
             name: "John Smith".to_string(),
+            username: Some("jsmith".to_string()),
             email: "john@company.com".to_string(),
             role: UserRole::Owner,
             organization_id: Some(org_id),
+            avatar_url: Some("https://api.dicebear.com/7.x/avataaars/svg?seed=John".to_string()),
+            assignments: vec![UserAssignment {
+                target_type: "Portfolio".to_string(),
+                target_id: Uuid::new_v4(),
+                target_name: "Downtown Properties".to_string(),
+                assigned_at: Utc::now(),
+                duration_days: Some(365),
+                reason: Some("Property oversight".to_string()),
+            }],
+            activity_log: vec![UserActivity {
+                action: "Created".to_string(),
+                target_type: "Asset".to_string(),
+                target_name: "Downtown Office".to_string(),
+                timestamp: Utc::now(),
+                reason: Some("New acquisition".to_string()),
+            }],
             department: Some("Executive".to_string()),
             phone: Some("+1-555-0100".to_string()),
             address: Some("123 Main St".to_string()),
@@ -369,9 +577,26 @@ fn default_mock_users() -> Vec<User> {
         User {
             id: Uuid::new_v4(),
             name: "Sarah Johnson".to_string(),
+            username: Some("sjohnson".to_string()),
             email: "sarah@company.com".to_string(),
             role: UserRole::Manager,
             organization_id: Some(org_id),
+            avatar_url: Some("https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah".to_string()),
+            assignments: vec![UserAssignment {
+                target_type: "Asset Group".to_string(),
+                target_id: Uuid::new_v4(),
+                target_name: "Fleet Vehicles".to_string(),
+                assigned_at: Utc::now(),
+                duration_days: Some(180),
+                reason: Some("Fleet coordinator".to_string()),
+            }],
+            activity_log: vec![UserActivity {
+                action: "Modified".to_string(),
+                target_type: "Asset".to_string(),
+                target_name: "Fleet Van #3".to_string(),
+                timestamp: Utc::now(),
+                reason: Some("Value update".to_string()),
+            }],
             department: Some("Operations".to_string()),
             phone: Some("+1-555-0101".to_string()),
             address: None,
@@ -395,9 +620,26 @@ fn default_mock_users() -> Vec<User> {
         User {
             id: Uuid::new_v4(),
             name: "Mike Williams".to_string(),
+            username: Some("mwilliams".to_string()),
             email: "mike@company.com".to_string(),
             role: UserRole::Worker,
             organization_id: Some(org_id),
+            avatar_url: Some("https://api.dicebear.com/7.x/avataaars/svg?seed=Mike".to_string()),
+            assignments: vec![UserAssignment {
+                target_type: "Asset".to_string(),
+                target_id: Uuid::new_v4(),
+                target_name: "Warehouse A".to_string(),
+                assigned_at: Utc::now(),
+                duration_days: Some(90),
+                reason: Some("Maintenance rotation".to_string()),
+            }],
+            activity_log: vec![UserActivity {
+                action: "Updated".to_string(),
+                target_type: "Task".to_string(),
+                target_name: "Roof repair".to_string(),
+                timestamp: Utc::now(),
+                reason: Some("Routine maintenance".to_string()),
+            }],
             department: Some("Field Operations".to_string()),
             phone: Some("+1-555-0102".to_string()),
             address: None,
@@ -421,9 +663,13 @@ fn default_mock_users() -> Vec<User> {
         User {
             id: Uuid::new_v4(),
             name: "Guest User".to_string(),
+            username: Some("guest".to_string()),
             email: "guest@company.com".to_string(),
             role: UserRole::Guest,
             organization_id: Some(org_id),
+            avatar_url: Some("https://api.dicebear.com/7.x/avataaars/svg?seed=Guest".to_string()),
+            assignments: vec![],
+            activity_log: vec![],
             department: Some("External".to_string()),
             phone: None,
             address: None,

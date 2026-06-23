@@ -33,7 +33,7 @@ leptos_meta = "0.8"
 # WASM
 cfg-if = "1.0"
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = ["console", "Window", "Document", "Element", "HtmlElement", "Event", "EventTarget", "MouseEvent", "InputEvent", "KeyboardEvent", "Storage", "Location", "History"] }
+web-sys = { version = "0.3", features = ["console", "Window", "Document", "Element", "HtmlElement", "Event", "EventTarget", "MouseEvent", "TouchEvent", "Touch", "TouchList", "InputEvent", "KeyboardEvent", "Storage", "Location", "History"] }
 js-sys = "0.3"
 console_error_panic_hook = "0.1"
 gloo-timers = { version = "0.3", features = ["futures"] }
@@ -53,6 +53,7 @@ getrandom = { version = "0.2", features = ["js"] }
 # Async runtime
 parking_lot = { version = "0.12", optional = true }
 dashmap = { version = "5.5", optional = true }
+sled = { version = "0.34", optional = true }
 
 # HTTP client
 reqwest = { version = "0.11", features = ["json"], optional = true }
@@ -63,7 +64,7 @@ gloo-net = { version = "0.5", features = ["http"], optional = true }
 [features]
 default = []
 hydrate = ["leptos/hydrate", "gloo-net"]
-ssr = ["leptos/ssr", "leptos_axum", "leptos_router/ssr", "leptos_meta/ssr", "axum", "tower", "tower-http", "tokio-stream", "bcrypt", "jsonwebtoken", "meilisearch-sdk", "reqwest", "parking_lot", "dashmap", "tracing-subscriber", "tokio", "tokio/rt-multi-thread", "tokio/net"]
+ssr = ["leptos/ssr", "leptos_axum", "leptos_router/ssr", "leptos_meta/ssr", "axum", "tower", "tower-http", "tokio-stream", "bcrypt", "jsonwebtoken", "meilisearch-sdk", "reqwest", "parking_lot", "dashmap", "sled", "tracing-subscriber", "tokio", "tokio/rt-multi-thread", "tokio/net"]
 csr = ["leptos/csr"]
 
 [[bin]]

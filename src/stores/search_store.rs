@@ -1,5 +1,5 @@
 use crate::models::{Asset, Portfolio};
-use crate::types::{SearchFilters, TabType};
+use crate::types::{SearchFilters, SortMode, TabType};
 use leptos::prelude::*;
 
 // Search store with Meilisearch integration
@@ -27,6 +27,8 @@ pub struct SearchStore {
     pub selected_tags: Vec<String>,
     // Search history for current session
     pub search_history: Vec<SearchQuery>,
+    // Sort mode for search results
+    pub sort_mode: SortMode,
 }
 
 #[derive(Clone, Debug)]
@@ -68,6 +70,7 @@ impl Default for SearchStore {
             ],
             selected_tags: Vec::new(),
             search_history: Vec::new(),
+            sort_mode: SortMode::Recent,
         }
     }
 }
@@ -89,6 +92,12 @@ impl SearchStore {
         self.filters = SearchFilters::default();
         self.results = SearchResults::default();
         self.selected_tags.clear();
+        self.sort_mode = SortMode::Recent;
+    }
+
+    // Set sort mode
+    pub fn set_sort_mode(&mut self, mode: SortMode) {
+        self.sort_mode = mode;
     }
 
     // Add tag filter
@@ -195,11 +204,14 @@ impl SearchStore {
             TabType::Portfolios => {
                 // Prioritize portfolios and assets
             }
-            TabType::Networking => {
+            TabType::Networking | TabType::NetworkingAddMember => {
                 // Prioritize users
             }
             TabType::Organization => {
                 // Prioritize organizations and members
+            }
+            TabType::Reporting => {
+                // Prioritize documents, payslips, hours, deeds
             }
             TabType::Transactions => {
                 // Prioritize transactions
@@ -227,7 +239,7 @@ impl SearchStore {
                     suggestions.push("portfolio:".to_string());
                     suggestions.push("asset:".to_string());
                 }
-                TabType::Networking => {
+                TabType::Networking | TabType::NetworkingAddMember => {
                     suggestions.push("user:".to_string());
                     suggestions.push("role:".to_string());
                 }
@@ -235,6 +247,12 @@ impl SearchStore {
                     suggestions.push("org:".to_string());
                     suggestions.push("member:".to_string());
                     suggestions.push("department:".to_string());
+                }
+                TabType::Reporting => {
+                    suggestions.push("doc:".to_string());
+                    suggestions.push("payslip:".to_string());
+                    suggestions.push("deed:".to_string());
+                    suggestions.push("registration:".to_string());
                 }
                 TabType::Transactions => {
                     suggestions.push("txn:".to_string());

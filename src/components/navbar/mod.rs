@@ -13,9 +13,10 @@ pub fn Navbar() -> impl IntoView {
     let can_undo = move || undo_store.get().can_undo();
     let can_redo = move || undo_store.get().can_redo();
     let is_search_open = move || app_store.get().is_search_open;
-    let is_advanced_search_open = move || search_store.get().is_advanced_search_open;
     let current_location = move || app_store.get().get_current_location();
     let profile_name = move || app_store.get().current_user.name.clone();
+    let profile_role = move || format!("{:?}", app_store.get().current_user.role);
+    let notification_count = move || app_store.get().notifications.len();
 
     // Helper to get user info tuple
     fn user_info(app_store: &leptos::prelude::RwSignal<crate::stores::AppStore>) -> (uuid::Uuid, String, String, Option<uuid::Uuid>) {
@@ -125,9 +126,6 @@ pub fn Navbar() -> impl IntoView {
         app_store.update(|store| {
             store.close_search();
         });
-        search_store.update(|store| {
-            store.close_advanced_search();
-        });
         let action = create_action(
             ActionType::Search,
             "Search",
@@ -140,126 +138,74 @@ pub fn Navbar() -> impl IntoView {
         undo_store.update(|u| u.record_action(action));
     };
 
-    let on_advanced_search_toggle = move |_| {
-        let (uid, name, role, org) = user_info(&app_store);
-        search_store.update(|store| {
-            let was_open = store.is_advanced_search_open;
-            store.toggle_advanced_search();
-            let description = if was_open {
-                "Closed advanced search"
-            } else {
-                "Opened advanced search"
-            };
-            let action = create_action(
-                ActionType::Search,
-                "Search",
-                description,
-                uid,
-                &name,
-                &role,
-                org,
-            );
-            undo_store.update(|u| u.record_action(action));
-        });
-    };
-
     view! {
-        // Search Panel - slides in from the right
-        <div
-            class="search-overlay"
-            class:active=is_search_open
-        >
-            <div class="search-panel-header">
-                <input
-                    type="text"
-                    class="search-input"
-                    placeholder="Search across all data..."
-                    prop:value={move || search_store.get().query}
-                    on:input=move |ev| {
-                        let value = event_target_value(&ev);
-                        search_store.update(|store| store.set_query(value));
-                    }
-                />
-                <button
-                    class="search-close-btn"
-                    on:click=on_search_close
-                >
-                    "✕"
-                </button>
-            </div>
-
-            {move || is_search_open().then(|| view! {
-                <div
-                    class="search-arrow-bar"
-                    class:active=is_advanced_search_open
-                    on:click=on_advanced_search_toggle
-                    title="Toggle advanced search"
-                >
-                    <span class="search-arrow-icon">
-                        {move || if is_advanced_search_open() { "▲" } else { "▼" }}
-                    </span>
-                </div>
-            })}
-
-            <div class="search-panel-body">
-                {move || is_search_open().then(|| view! {
-                    <Show when=move || is_advanced_search_open()>
-                        <SearchFilters />
-                    </Show>
-                })}
-            </div>
-        </div>
-
-        // Main Navbar - Fixed at top
+        // Main Navbar - Fixed at top, two rows
         <nav class="navbar">
-            // Left section: Home, Redo
-            <div class="navbar-section">
-                <button
-                    class="nav-btn"
-                    on:click=on_home
-                    title="Home"
-                >
-                    "⌂"
-                </button>
-                <button
-                    class="nav-btn"
-                    on:click=on_redo
-                    disabled={move || !can_redo()}
-                    title="Redo"
-                >
-                    "↻"
-                </button>
+            // ROW 1: buttons OR search bar when open
+            <div class="navbar-row navbar-row-1">
+                {move || if is_search_open() {
+                    view! {
+                        <div class="nav-search-bar-wrap">
+                            <input
+                                type="text"
+                                class="nav-search-bar-input"
+                                placeholder="Search..."
+                                prop:value={move || search_store.get().query}
+                                on:input=move |ev| {
+                                    let v = event_target_value(&ev);
+                                    search_store.update(|s| s.set_query(v));
+                                }
+                            />
+                            <button class="nav-search-close-btn" on:click=on_search_close>"✕"</button>
+                        </div>
+                    }.into_any()
+                } else {
+                    view! {
+                        <div class="nav-row1-left">
+                            <button class="nav-btn" on:click=on_home title="Home">"⌂"</button>
+                            <button class="nav-btn" on:click=on_redo
+                                disabled={move || !can_redo()} title="Redo">"↻"</button>
+                        </div>
+                        <div class="nav-row1-centre">
+                            <span class="nav-profile-name-top">{profile_name}</span>
+                        </div>
+                        <div class="nav-row1-right">
+                            <button class="nav-btn" on:click=on_undo
+                                disabled={move || !can_undo()} title="Undo">"↺"</button>
+                            <button class="nav-btn nav-search-btn" on:click=on_search_click title="Search">"🔍"</button>
+                        </div>
+                    }.into_any()
+                }}
             </div>
 
-            // Middle: Location and Profile
-            <div class="nav-location">
-                <div class="nav-location-text">{current_location}</div>
-                <div class="nav-profile-name">{profile_name}</div>
-            </div>
-
-            // Left of search: Undo button
-            <div class="navbar-section">
-                <button
-                    class="nav-btn"
-                    on:click=on_undo
-                    disabled={move || !can_undo()}
-                    title="Undo"
-                >
-                    "↺"
-                </button>
-            </div>
-
-            // Right: Search button
-            <div class="navbar-section">
-                <button
-                    class="nav-btn"
-                    class:active=is_search_open
-                    on:click=on_search_click
-                    title="Search"
-                >
-                    "🔍"
-                </button>
+            // ROW 2: Avatar | [centre: Location above Role] | Notifications
+            <div class="navbar-row navbar-row-2">
+                <div class="nav-avatar">"⚙"</div>
+                <div class="nav-centre">
+                    <div class="nav-centre-top">
+                        <span class="nav-location-label">{current_location}</span>
+                    </div>
+                    <div class="nav-profile-role">{profile_role}</div>
+                </div>
+                <div class="nav-notif-wrap">
+                    <div class="nav-notif-icon">"✉"</div>
+                    {move || {
+                        let count = notification_count();
+                        if count > 0 {
+                            view! { <div class="nav-notif-badge">{count}</div> }.into_any()
+                        } else { ().into_any() }
+                    }}
+                </div>
             </div>
         </nav>
+
+        // Search panel - drops below navbar when open
+        {move || if is_search_open() {
+            view! {
+                <div class="search-drop-panel">
+                    <SearchFilters />
+                </div>
+            }.into_any()
+        } else { ().into_any() }}
     }
 }

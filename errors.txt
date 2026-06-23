@@ -1,0 +1,292 @@
+warning: unused variable: `pid_del`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `pid_del`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `pid_del`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `pid_del`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `pid_del`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `pid_del`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `pid_del`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `pid_del`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+error[E0599]: no method named `expanded` found for struct `PortfolioListItemPropsBuilder<..., ..., ...>` in the current scope
+error[E0599]: no method named `expanded` found for struct `PortfolioListItemPropsBuilder<..., ..., ...>` in the current scope
+error: could not compile `farley` (lib) due to 1 previous error
+error: could not compile `farley` (lib) due to 1 previous error
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `expanded`
+warning: unused variable: `show_add_group`
+warning: unused variable: `set_show_add_group`
+warning: unused variable: `set_new_group_name`
+warning: unused variable: `on_add_group`
+warning: unused variable: `show_add_asset`
+warning: unused variable: `set_show_add_asset`
+warning: unused variable: `new_asset_name`
+warning: unused variable: `set_new_asset_name`
+warning: unused variable: `new_asset_type`
+warning: unused variable: `set_new_asset_type`
+warning: unused variable: `new_asset_value`
+warning: unused variable: `set_new_asset_value`
+warning: unused variable: `on_add_asset`
+warning: unused variable: `view_mode`
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: multiple fields are never read
+warning: function `shorthand_name` is never used
+warning: unused variable: `expanded`
+warning: unused variable: `show_add_group`
+warning: unused variable: `set_show_add_group`
+warning: unused variable: `set_new_group_name`
+warning: unused variable: `on_add_group`
+warning: unused variable: `show_add_asset`
+warning: unused variable: `set_show_add_asset`
+warning: unused variable: `new_asset_name`
+warning: unused variable: `set_new_asset_name`
+warning: unused variable: `new_asset_type`
+warning: unused variable: `set_new_asset_type`
+warning: unused variable: `new_asset_value`
+warning: unused variable: `set_new_asset_value`
+warning: unused variable: `on_add_asset`
+warning: unused variable: `view_mode`
+warning: function `use_open_settings_tab` is never used
+warning: multiple fields are never read
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 19 warnings (run `cargo fix --lib -p farley` to apply 16 suggestions)
+warning: `farley` (lib) generated 19 warnings (run `cargo fix --lib -p farley` to apply 16 suggestions)
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+error[E0308]: mismatched types
+error[E0308]: mismatched types
+warning: unused variable: `selected_portfolio`
+warning: `farley` (lib) generated 1 warning
+error: could not compile `farley` (lib) due to 1 previous error; 1 warning emitted
+warning: unused variable: `selected_portfolio`
+warning: `farley` (lib) generated 1 warning
+error: could not compile `farley` (lib) due to 1 previous error; 1 warning emitted
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused import: `Document`
+warning: unused import: `Document`
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 4 warnings (run `cargo fix --lib -p farley` to apply 2 suggestions)
+warning: `farley` (lib) generated 4 warnings (run `cargo fix --lib -p farley` to apply 2 suggestions)
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 2 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 2 warnings emitted
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 2 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 2 warnings emitted
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 2 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 2 warnings emitted
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 2 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 2 warnings emitted
+error[E0382]: use of moved value: `on_close`
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `new_doc_name`
+warning: unused variable: `set_new_doc_name`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 4 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 4 warnings emitted
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `new_doc_name`
+warning: unused variable: `set_new_doc_name`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 4 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 4 warnings emitted
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `new_doc_name`
+warning: unused variable: `set_new_doc_name`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 4 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 4 warnings emitted
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `new_doc_name`
+warning: unused variable: `set_new_doc_name`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 4 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 4 warnings emitted
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `new_doc_name`
+warning: unused variable: `set_new_doc_name`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 4 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 4 warnings emitted
+error[E0382]: use of moved value: `on_close`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `new_doc_name`
+warning: unused variable: `set_new_doc_name`
+warning: unused variable: `doc_for_close`
+warning: `farley` (lib) generated 4 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 4 warnings emitted
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `new_doc_name`
+warning: unused variable: `set_new_doc_name`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `new_doc_name`
+warning: unused variable: `set_new_doc_name`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 5 warnings (run `cargo fix --lib -p farley` to apply 3 suggestions)
+warning: `farley` (lib) generated 5 warnings (run `cargo fix --lib -p farley` to apply 3 suggestions)
+error[E0308]: mismatched types
+error[E0600]: cannot apply unary operator `!` to type `leptos::prelude::Memo<bool>`
+error[E0277]: the trait bound `(&str, {closure@...}): IntoClass` is not satisfied
+error[E0308]: mismatched types
+error[E0600]: cannot apply unary operator `!` to type `leptos::prelude::Memo<bool>`
+error[E0277]: the trait bound `(&str, {closure@...}): IntoClass` is not satisfied
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `selected_portfolio`
+warning: `farley` (lib) generated 1 warning
+error: could not compile `farley` (lib) due to 3 previous errors; 1 warning emitted
+warning: `farley` (lib) generated 1 warning
+error: could not compile `farley` (lib) due to 3 previous errors; 1 warning emitted
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: unused variable: `selected_portfolio`
+warning: function `use_open_settings_tab` is never used
+warning: function `shorthand_name` is never used
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+warning: `farley` (lib) generated 3 warnings (run `cargo fix --lib -p farley` to apply 1 suggestion)
+error[E0382]: use of moved value: `a_addr`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `doc_count`
+warning: `farley` (lib) generated 2 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 2 warnings emitted
+error[E0382]: use of moved value: `a_addr`
+warning: unused variable: `selected_portfolio`
+warning: unused variable: `doc_count`
+warning: `farley` (lib) generated 2 warnings
+error: could not compile `farley` (lib) due to 1 previous error; 2 warnings emitted
+error[E0382]: use of moved value: `a_addr`
+warning: unused variable: `selected_portfolio`
+warning: `farley` (lib) generated 1 warning
+error: could not compile `farley` (lib) due to 1 previous error; 1 warning emitted
+error[E0382]: use of moved value: `a_addr`
+warning: unused variable: `selected_portfolio`
+warning: `farley` (lib) generated 1 warning
+error: could not compile `farley` (lib) due to 1 previous error; 1 warning emitted
+error[E0382]: use of moved value: `a_addr`
+warning: unused variable: `selected_portfolio`
+warning: `farley` (lib) generated 1 warning
+error: could not compile `farley` (lib) due to 1 previous error; 1 warning emitted
+error[E0382]: use of moved value: `a_addr`
+warning: unused variable: `selected_portfolio`
+warning: `farley` (lib) generated 1 warning
+error: could not compile `farley` (lib) due to 1 previous error; 1 warning emitted
+error[E0382]: use of moved value: `a_addr`
+error[E0382]: use o

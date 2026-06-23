@@ -220,149 +220,221 @@ pub fn LoginPage() -> impl IntoView {
         });
     };
 
-    view! {
-        <div class="login-screen">
-            <div class="login-card">
-                <div class="login-header">
-                    <h1>"Farley"</h1>
-                    <p>"Sign in to your account"</p>
-                </div>
+    let (changelog_open, set_changelog_open) = signal(false);
+    let (show_username, set_show_username) = signal(true);
+    let (show_password, set_show_password) = signal(false);
+    let (su_show_pass, set_su_show_pass) = signal(false);
+    let (su_show_confirm, set_su_show_confirm) = signal(false);
 
-                <div class="login-form">
-                    <div class="login-field">
-                        <label>"Username"</label>
+    view! {
+        <div class="lp-screen">
+
+            // ── RED HEADER ──
+            <div class="lp-header">
+                <div class="lp-logo">"C"</div>
+                <div class="lp-title">"LOGIN"</div>
+                <div class="lp-version">"2.1.1"</div>
+            </div>
+
+            // ── SAVED PROFILES ROW ──
+            <div class="lp-saved-row">
+                <div class="lp-saved-icon">"⚙"</div>
+                <div class="lp-saved-label">"SAVED PROFILES"</div>
+                <div class="lp-saved-arrow">"▼"</div>
+            </div>
+
+            // ── USERNAME ROW ──
+            <div class="lp-field-row">
+                <button class="lp-visibility-btn" title="Toggle username visibility"
+                    on:click=move |_| set_show_username.update(|v| *v = !*v)>
+                    {move || if show_username.get() { "◉" } else { "○" }}
+                </button>
+                {move || {
+                    let vis = show_username.get();
+                    view! {
                         <input
-                            type="text"
-                            class="login-input"
-                            placeholder="Enter your username"
+                            type={if vis { "text" } else { "password" }}
+                            class="lp-field-input"
+                            placeholder="Username"
                             on:input=move |ev| set_username.set(event_target_value(&ev))
                         />
-                    </div>
+                    }
+                }}
+            </div>
 
-                    <div class="login-field">
-                        <label>"Password"</label>
+            // ── PASSWORD ROW ──
+            <div class="lp-field-row">
+                <button class="lp-visibility-btn" title="Toggle password visibility"
+                    on:click=move |_| set_show_password.update(|v| *v = !*v)>
+                    {move || if show_password.get() { "◉" } else { "○" }}
+                </button>
+                {move || {
+                    let vis = show_password.get();
+                    view! {
                         <input
-                            type="password"
-                            class="login-input"
-                            placeholder="Enter your password"
+                            type={if vis { "text" } else { "password" }}
+                            class="lp-field-input"
+                            placeholder="Password"
                             on:input=move |ev| set_password.set(event_target_value(&ev))
                         />
-                    </div>
-
-                    {move || {
-                        let err = error.get();
-                        if err.is_empty() {
-                            ().into_any()
-                        } else {
-                            view! {
-                                <div class="login-error">{err}</div>
-                            }.into_any()
-                        }
-                    }}
-
-                    <button class="login-btn" on:click=on_login>
-                        "Sign In"
-                    </button>
-
-                    <button class="signup-btn" on:click=move |_| set_show_signup.set(true)>
-                        "Sign Up"
-                    </button>
-                </div>
+                    }
+                }}
             </div>
+
+            // ── ERROR ──
+            {move || {
+                let err = error.get();
+                if err.is_empty() { ().into_any() } else {
+                    view! { <div class="lp-error">{err}</div> }.into_any()
+                }
+            }}
+
+            // ── REGISTER / LOGIN BUTTONS ──
+            <div class="lp-action-row">
+                <button class="lp-action-btn lp-register" on:click=move |_| set_show_signup.set(true)>
+                    "REGISTER"
+                </button>
+                <button class="lp-action-btn lp-login" on:click=on_login>
+                    "LOGIN"
+                </button>
+            </div>
+
+            // ── OAUTH / 2FA ROW ──
+            <div class="lp-oauth-row">
+                <button class="lp-oauth-btn">"GMAIL"</button>
+                <div class="lp-oauth-divider" />
+                <button class="lp-oauth-btn">"LINKEDIN"</button>
+                <div class="lp-oauth-divider" />
+                <button class="lp-oauth-btn">"2FA"</button>
+            </div>
+
+            // ── CHANGELOG ACCORDION ──
+            <div class="lp-changelog">
+                <div class="lp-changelog-header" on:click=move |_| set_changelog_open.update(|v| *v = !*v)>
+                    <span>"CHANGELOG"</span>
+                    <span>{move || if changelog_open.get() { "▲" } else { "▼" }}</span>
+                </div>
+                {move || if changelog_open.get() {
+                    view! {
+                        <div class="lp-changelog-body">
+                            <div class="lp-changelog-summary">"Brief summary of notable changes"</div>
+                            <ul class="lp-changelog-list">
+                                <li>"Changes"</li>
+                                <li>"Changes"</li>
+                                <li>"Changes"</li>
+                                <li>"Changes"</li>
+                                <li>"Changes"</li>
+                            </ul>
+                        </div>
+                    }.into_any()
+                } else { ().into_any() }}
+            </div>
+
+            // ── FOOTER ──
+            <div class="lp-footer">
+                <button class="lp-footer-btn">"NEWS"</button>
+                <div class="lp-footer-divider" />
+                <button class="lp-footer-btn">"ABOUT"</button>
+                <div class="lp-footer-divider" />
+                <button class="lp-footer-btn">"HELP"</button>
+            </div>
+
         </div>
 
-        // Signup Modal
+        // ── REGISTER SCREEN (lp-style) ──
         {move || {
             if show_signup.get() {
                 view! {
-                    <div class="signup-overlay" on:click=move |_| set_show_signup.set(false)>
-                        <div class="signup-modal" on:click=move |ev| ev.stop_propagation()>
-                            <div class="signup-header">
-                                <h2>"Create Account"</h2>
-                                <button class="signup-close" on:click=move |_| set_show_signup.set(false)>
-                                    "✕"
-                                </button>
-                            </div>
+                    <div class="lp-screen lp-register-screen">
+                        <div class="lp-header">
+                            <div class="lp-logo">"C"</div>
+                            <div class="lp-title">"REGISTER"</div>
+                            <button class="lp-close-btn" on:click=move |_| set_show_signup.set(false)>"✕"</button>
+                        </div>
 
-                            <div class="signup-form">
-                                <div class="login-field">
-                                    <label>"Username"</label>
-                                    <input
-                                        type="text"
-                                        class="login-input"
-                                        placeholder="Choose a username"
-                                        on:input=move |ev| set_su_username.set(event_target_value(&ev))
-                                    />
-                                </div>
+                        <div class="lp-saved-row" style="cursor:default;">
+                            <div class="lp-saved-label">"Create a new account"</div>
+                        </div>
 
-                                <div class="login-field">
-                                    <label>"Email"</label>
-                                    <input
-                                        type="email"
-                                        class="login-input"
-                                        placeholder="Enter your email"
-                                        on:input=move |ev| set_su_email.set(event_target_value(&ev))
-                                    />
-                                </div>
+                        // Username
+                        <div class="lp-field-row">
+                            <div class="lp-visibility-btn" style="cursor:default;opacity:0.5;">"◉"</div>
+                            <input type="text" class="lp-field-input" placeholder="Username"
+                                on:input=move |ev| set_su_username.set(event_target_value(&ev)) />
+                        </div>
 
-                                <div class="login-field">
-                                    <label>"Password"</label>
-                                    <input
-                                        type="password"
-                                        class="login-input"
-                                        placeholder="Choose a password"
-                                        on:input=move |ev| set_su_password.set(event_target_value(&ev))
-                                    />
-                                </div>
+                        // Email
+                        <div class="lp-field-row">
+                            <div class="lp-visibility-btn" style="cursor:default;opacity:0.5;">"@"</div>
+                            <input type="email" class="lp-field-input" placeholder="Email"
+                                on:input=move |ev| set_su_email.set(event_target_value(&ev)) />
+                        </div>
 
-                                <div class="login-field">
-                                    <label>"Confirm Password"</label>
-                                    <input
-                                        type="password"
-                                        class="login-input"
-                                        placeholder="Confirm your password"
-                                        on:input=move |ev| set_su_confirm.set(event_target_value(&ev))
-                                    />
-                                </div>
+                        // Password
+                        <div class="lp-field-row">
+                            <button class="lp-visibility-btn" on:click=move |_| set_su_show_pass.update(|v| *v = !*v)>
+                                {move || if su_show_pass.get() { "◉" } else { "○" }}
+                            </button>
+                            {move || {
+                                let vis = su_show_pass.get();
+                                view! {
+                                    <input type={if vis { "text" } else { "password" }}
+                                        class="lp-field-input" placeholder="Password"
+                                        on:input=move |ev| set_su_password.set(event_target_value(&ev)) />
+                                }
+                            }}
+                        </div>
 
-                                {move || {
-                                    let err = su_error.get();
-                                    if err.is_empty() {
-                                        ().into_any()
-                                    } else {
-                                        view! {
-                                            <div class="login-error">{err}</div>
-                                        }.into_any()
-                                    }
-                                }}
+                        // Confirm password
+                        <div class="lp-field-row">
+                            <button class="lp-visibility-btn" on:click=move |_| set_su_show_confirm.update(|v| *v = !*v)>
+                                {move || if su_show_confirm.get() { "◉" } else { "○" }}
+                            </button>
+                            {move || {
+                                let vis = su_show_confirm.get();
+                                view! {
+                                    <input type={if vis { "text" } else { "password" }}
+                                        class="lp-field-input" placeholder="Confirm Password"
+                                        on:input=move |ev| set_su_confirm.set(event_target_value(&ev)) />
+                                }
+                            }}
+                        </div>
 
-                                {move || {
-                                    let success = su_success.get();
-                                    if success.is_empty() {
-                                        ().into_any()
-                                    } else {
-                                        view! {
-                                            <div class="signup-success">{success}</div>
-                                        }.into_any()
-                                    }
-                                }}
+                        // Error / success
+                        {move || {
+                            let err = su_error.get();
+                            if err.is_empty() { ().into_any() } else {
+                                view! { <div class="lp-error">{err}</div> }.into_any()
+                            }
+                        }}
+                        {move || {
+                            let s = su_success.get();
+                            if s.is_empty() { ().into_any() } else {
+                                view! { <div class="lp-success">{s}</div> }.into_any()
+                            }
+                        }}
 
-                                <button class="login-btn" on:click=on_signup>
-                                    "Create Account"
-                                </button>
+                        // Action row
+                        <div class="lp-action-row">
+                            <button class="lp-action-btn lp-register"
+                                on:click=move |_| set_show_signup.set(false)>
+                                "BACK"
+                            </button>
+                            <button class="lp-action-btn lp-login" on:click=on_signup>
+                                "CREATE"
+                            </button>
+                        </div>
 
-                                <p class="signup-hint">
-                                    "A validation email will be sent. Check "
-                                    <a href="/emailvalid" target="_blank">"/emailvalid"</a>
-                                    " to view it."
-                                </p>
-                            </div>
+                        <div class="lp-footer">
+                            <button class="lp-footer-btn">"NEWS"</button>
+                            <div class="lp-footer-divider" />
+                            <button class="lp-footer-btn">"ABOUT"</button>
+                            <div class="lp-footer-divider" />
+                            <button class="lp-footer-btn">"HELP"</button>
                         </div>
                     </div>
                 }.into_any()
-            } else {
-                ().into_any()
-            }
+            } else { ().into_any() }
         }}
     }
 }

@@ -13,7 +13,7 @@ pub fn OrganizationPage() -> impl IntoView {
 
     let can_manage = move || {
         let role = app_store.get().current_user.role.clone();
-        role == UserRole::Owner || role == UserRole::Manager
+        matches!(role, UserRole::Owner | UserRole::Director | UserRole::SeniorManager | UserRole::Manager)
     };
 
     // Add org form
@@ -118,10 +118,30 @@ pub fn OrganizationPage() -> impl IntoView {
 
     view! {
         <div class="home-screen">
-            <div class="welcome-header">
-                <h1>"Organization"</h1>
-                <p>"Manage your organizations and team members"</p>
-            </div>
+            // Active organization selector
+            {move || {
+                let store = app_store.get();
+                let orgs = store.organizations.clone();
+                if !orgs.is_empty() {
+                    view! {
+                        <div class="view-toggle">
+                            {orgs.into_iter().map(|org| {
+                                let oid = org.id;
+                                let is_active = app_store.get().current_organization_id == Some(oid);
+                                view! {
+                                    <button
+                                        class="view-btn"
+                                        class:active=is_active
+                                        on:click=move |_| app_store.update(|s| s.switch_organization(oid))
+                                    >
+                                        {org.name.clone()}
+                                    </button>
+                                }
+                            }).collect::<Vec<_>>()}
+                        </div>
+                    }.into_any()
+                } else { ().into_any() }
+            }}
 
             // Add Organization button
             {move || if can_manage() {
@@ -269,16 +289,22 @@ pub fn OrganizationPage() -> impl IntoView {
                                                                     let v = event_target_value(&ev);
                                                                     let r = match v.as_str() {
                                                                         "Owner" => UserRole::Owner,
+                                                                        "Director" => UserRole::Director,
+                                                                        "SeniorManager" => UserRole::SeniorManager,
                                                                         "Manager" => UserRole::Manager,
                                                                         "Worker" => UserRole::Worker,
+                                                                        "Contractor" => UserRole::Contractor,
                                                                         _ => UserRole::Guest,
                                                                     };
                                                                     set_member_role.set(r);
                                                                 }
                                                             >
-                                                                <option value="Worker">"Worker"</option>
-                                                                <option value="Manager">"Manager"</option>
                                                                 <option value="Owner">"Owner"</option>
+                                                                <option value="Director">"Director"</option>
+                                                                <option value="SeniorManager">"Senior Manager"</option>
+                                                                <option value="Manager">"Manager"</option>
+                                                                <option value="Worker">"Worker"</option>
+                                                                <option value="Contractor">"Contractor"</option>
                                                                 <option value="Guest">"Guest"</option>
                                                             </select>
                                                             <button class="login-btn"
@@ -320,16 +346,22 @@ pub fn OrganizationPage() -> impl IntoView {
                                                                                         let v = event_target_value(&ev);
                                                                                         let r = match v.as_str() {
                                                                                             "Owner" => UserRole::Owner,
+                                                                                            "Director" => UserRole::Director,
+                                                                                            "SeniorManager" => UserRole::SeniorManager,
                                                                                             "Manager" => UserRole::Manager,
                                                                                             "Worker" => UserRole::Worker,
+                                                                                            "Contractor" => UserRole::Contractor,
                                                                                             _ => UserRole::Guest,
                                                                                         };
                                                                                         on_update_member_role(uid_r, r);
                                                                                     }
                                                                                 >
-                                                                                    <option value="Worker" selected={user.role == UserRole::Worker}>"Worker"</option>
-                                                                                    <option value="Manager" selected={user.role == UserRole::Manager}>"Manager"</option>
                                                                                     <option value="Owner" selected={user.role == UserRole::Owner}>"Owner"</option>
+                                                                                    <option value="Director" selected={user.role == UserRole::Director}>"Director"</option>
+                                                                                    <option value="SeniorManager" selected={user.role == UserRole::SeniorManager}>"Senior Manager"</option>
+                                                                                    <option value="Manager" selected={user.role == UserRole::Manager}>"Manager"</option>
+                                                                                    <option value="Worker" selected={user.role == UserRole::Worker}>"Worker"</option>
+                                                                                    <option value="Contractor" selected={user.role == UserRole::Contractor}>"Contractor"</option>
                                                                                     <option value="Guest" selected={user.role == UserRole::Guest}>"Guest"</option>
                                                                                 </select>
                                                                                 <button class="card-btn sell"

@@ -1,5 +1,5 @@
 use crate::stores::{format_action_description, use_app_store, use_undo_redo_store};
-use crate::types::ActionType;
+use crate::types::{ActionType, SortMode};
 use leptos::prelude::*;
 
 fn action_type_badge(action_type: &ActionType) -> (&'static str, &'static str) {
@@ -27,6 +27,7 @@ pub fn HistoryPage() -> impl IntoView {
 
     let action_count = move || undo_store.get().past.len();
     let recent_actions = move || undo_store.get().get_recent_actions(50);
+    let (sort_mode, set_sort_mode) = signal(SortMode::Recent);
     let current_user_name = move || app_store.get().current_user.name.clone();
     let current_user_role = move || format!("{:?}", app_store.get().current_user.role);
 
@@ -56,10 +57,30 @@ pub fn HistoryPage() -> impl IntoView {
 
             <div class="data-card">
                 <div class="card-header">
-                    <span class="card-title">"Recent Actions"</span>
+                    <span class="card-title">"Actions"</span>
+                    <select
+                        class="form-select"
+                        style="width: auto; min-width: 120px;"
+                        on:change=move |ev| {
+                            let v = event_target_value(&ev);
+                            let mode = match v.as_str() {
+                                "oldest" => SortMode::Oldest,
+                                _ => SortMode::Recent,
+                            };
+                            set_sort_mode.set(mode);
+                        }
+                    >
+                        <option value="recent">"Recent"</option>
+                        <option value="oldest">"Oldest"</option>
+                    </select>
                 </div>
                 {move || {
-                    let actions = recent_actions();
+                    let sort = sort_mode.get();
+                    let mut actions = recent_actions();
+                    actions.sort_by(|a, b| match sort {
+                        SortMode::Oldest => a.timestamp.cmp(&b.timestamp),
+                        _ => b.timestamp.cmp(&a.timestamp),
+                    });
                     if actions.is_empty() {
                         view! {
                             <div style="padding: 20px; text-align: center; color: var(--text-secondary);">

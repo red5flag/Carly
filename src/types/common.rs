@@ -2,21 +2,27 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// User roles for organization hierarchy: Owner > Manager > Worker > Guest
+// User roles for organization hierarchy: Owner > Director > SeniorManager > Manager > Worker > Contractor > Guest
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UserRole {
     Owner,
+    Director,
+    SeniorManager,
     Manager,
     Worker,
+    Contractor,
     Guest,
 }
 
 impl UserRole {
     pub fn level(&self) -> u8 {
         match self {
-            UserRole::Owner => 3,
-            UserRole::Manager => 2,
-            UserRole::Worker => 1,
+            UserRole::Owner => 6,
+            UserRole::Director => 5,
+            UserRole::SeniorManager => 4,
+            UserRole::Manager => 3,
+            UserRole::Worker => 2,
+            UserRole::Contractor => 1,
             UserRole::Guest => 0,
         }
     }
@@ -147,6 +153,21 @@ impl Default for ViewMode {
     }
 }
 
+// Sort modes for lists
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub enum SortMode {
+    #[default]
+    Recent,
+    Oldest,
+    HighestValue,
+    LowestValue,
+    HighestProfit,
+    LowestProfit,
+    HighestRevenue,
+    LowestRevenue,
+    ByOrganization,
+}
+
 // Search filters
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct SearchFilters {
@@ -211,7 +232,9 @@ pub enum TabType {
     Overview,
     Portfolios,
     Networking,
+    NetworkingAddMember,
     Organization,
+    Reporting,
     Transactions,
     History,
     Settings,
@@ -224,7 +247,9 @@ impl TabType {
             TabType::Overview => "Overview",
             TabType::Portfolios => "Portfolios",
             TabType::Networking => "Networking",
+            TabType::NetworkingAddMember => "Add Team",
             TabType::Organization => "Organization",
+            TabType::Reporting => "Reporting",
             TabType::Transactions => "Transactions",
             TabType::History => "History",
             TabType::Settings => "Settings",

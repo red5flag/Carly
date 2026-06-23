@@ -11,6 +11,7 @@ use uuid::Uuid;
 pub struct User {
     pub id: Uuid,
     pub name: String,
+    pub username: Option<String>,
     pub email: String,
     pub role: UserRole,
     pub organization_id: Option<Uuid>,
@@ -19,13 +20,35 @@ pub struct User {
     pub address: Option<String>,
     pub hire_date: Option<DateTime<Utc>>,
     pub base_salary: Option<f64>,
+    pub avatar_url: Option<String>,
     pub payment_settings: PaymentSettings,
     pub notification_preferences: Vec<(NotificationTrigger, Vec<NotificationType>)>,
     pub permissions: Vec<Permission>,
+    pub assignments: Vec<UserAssignment>,
+    pub activity_log: Vec<UserActivity>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub last_login: Option<DateTime<Utc>>,
     pub is_active: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct UserAssignment {
+    pub target_type: String,
+    pub target_id: Uuid,
+    pub target_name: String,
+    pub assigned_at: DateTime<Utc>,
+    pub duration_days: Option<i64>,
+    pub reason: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct UserActivity {
+    pub action: String,
+    pub target_type: String,
+    pub target_name: String,
+    pub timestamp: DateTime<Utc>,
+    pub reason: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -58,6 +81,7 @@ impl User {
         Self {
             id: Uuid::new_v4(),
             name,
+            username: None,
             email,
             role,
             organization_id: None,
@@ -66,9 +90,12 @@ impl User {
             address: None,
             hire_date: None,
             base_salary: None,
+            avatar_url: None,
             payment_settings: PaymentSettings::default(),
             notification_preferences: Vec::new(),
             permissions,
+            assignments: Vec::new(),
+            activity_log: Vec::new(),
             created_at: now,
             updated_at: now,
             last_login: None,
@@ -122,6 +149,13 @@ pub fn default_permissions_for_role(role: &UserRole) -> Vec<Permission> {
             Permission::ExportData,
             Permission::ImportData,
         ],
+        UserRole::Director | UserRole::SeniorManager => vec![
+            Permission::ViewAll,
+            Permission::EditOrganization,
+            Permission::ManageUsers,
+            Permission::ManagePayments,
+            Permission::ExportData,
+        ],
         UserRole::Manager => vec![
             Permission::ViewOrganization,
             Permission::CreateOrganization,
@@ -135,6 +169,10 @@ pub fn default_permissions_for_role(role: &UserRole) -> Vec<Permission> {
             Permission::CreateOwn,
             Permission::EditOwn,
             Permission::DeleteOwn,
+        ],
+        UserRole::Contractor => vec![
+            Permission::ViewOwn,
+            Permission::CreateOwn,
         ],
         UserRole::Guest => vec![Permission::ViewOwn],
     }

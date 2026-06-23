@@ -1,6 +1,6 @@
 use crate::models::{EntityReference, EntityType, Transaction, TransactionStatus};
 use crate::stores::use_app_store;
-use crate::types::{Currency, TransactionType};
+use crate::types::{Currency, SortMode, TransactionType};
 use chrono::Utc;
 use leptos::prelude::*;
 use uuid::Uuid;
@@ -115,6 +115,8 @@ pub fn TransactionsPage() -> impl IntoView {
         ]
     });
 
+    let (sort_mode, set_sort_mode) = signal(SortMode::Recent);
+
     let total_volume = move || {
         transactions
             .get()
@@ -133,13 +135,38 @@ pub fn TransactionsPage() -> impl IntoView {
 
             <div class="data-card">
                 <div class="card-header">
-                    <span class="card-title">"Recent Transactions"</span>
+                    <span class="card-title">"Transactions"</span>
+                    <select
+                        class="form-select"
+                        style="width: auto; min-width: 120px;"
+                        on:change=move |ev| {
+                            let v = event_target_value(&ev);
+                            let mode = match v.as_str() {
+                                "oldest" => SortMode::Oldest,
+                                "highest_amount" => SortMode::HighestValue,
+                                "lowest_amount" => SortMode::LowestValue,
+                                _ => SortMode::Recent,
+                            };
+                            set_sort_mode.set(mode);
+                        }
+                    >
+                        <option value="recent">"Recent"</option>
+                        <option value="oldest">"Oldest"</option>
+                        <option value="highest_amount">"Highest Amount"</option>
+                        <option value="lowest_amount">"Lowest Amount"</option>
+                    </select>
                 </div>
                 {move || {
-                    transactions
-                        .get()
-                        .into_iter()
-                        .map(|transaction| {
+                    let sort = sort_mode.get();
+                    let mut items: Vec<_> = transactions.get().into_iter().collect();
+                    items.sort_by(|a, b| match sort {
+                        SortMode::Recent => b.created_at.cmp(&a.created_at),
+                        SortMode::Oldest => a.created_at.cmp(&b.created_at),
+                        SortMode::HighestValue => b.amount.partial_cmp(&a.amount).unwrap_or(std::cmp::Ordering::Equal),
+                        SortMode::LowestValue => a.amount.partial_cmp(&b.amount).unwrap_or(std::cmp::Ordering::Equal),
+                        _ => b.created_at.cmp(&a.created_at),
+                    });
+                    items.into_iter().map(|transaction| {
                             let icon = type_icon(&transaction.transaction_type);
                             let status = status_label(&transaction.status);
                             let amount = format!("${:.2}", transaction.amount);

@@ -7,6 +7,8 @@ pub mod stores;
 pub mod types;
 pub mod utils;
 pub mod agent;
+#[cfg(feature = "ssr")]
+pub mod storage;
 
 use cfg_if::cfg_if;
 
